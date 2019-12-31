@@ -1,0 +1,7 @@
+name = "RowActionMethods"
+uuid = "8996f5da-76e3-43de-86da-5c0241bb3374"
+authors = ["EdwardStables <edward.stables1198@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
