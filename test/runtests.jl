@@ -4,6 +4,31 @@ using Test
 
 include("example_qp.jl")
 
+@testset "RowActionCore" begin
+    @testset "get_SC" begin
+        a = SC_Iterations(5)
+        b = SC_Iterations(10)
+        c = SC_Iterations(15)
+
+        result_1 = MultipleStopCondition(RowActionMethods.StoppingCondition[
+                                         SC_Iterations(5)
+                                         ])
+        result_2 = MultipleStopCondition(RowActionMethods.StoppingCondition[
+                                         SC_Iterations(5),
+                                         SC_Iterations(10)
+                                         ])
+        result_3 = MultipleStopCondition(RowActionMethods.StoppingCondition[
+                                         SC_Iterations(5),
+                                         SC_Iterations(10),
+                                         SC_Iterations(15)
+                                         ])
+
+        @test RowActionMethods.compare_MultipleStopCondition(get_SC(a), result_1)
+        @test RowActionMethods.compare_MultipleStopCondition(get_SC(a, b), result_2)
+        @test RowActionMethods.compare_MultipleStopCondition(get_SC(a, b, c), result_3)
+    end
+end
+
 """
     RowActionMethodStandardTests(method::T,
                                  run_answer_check=true

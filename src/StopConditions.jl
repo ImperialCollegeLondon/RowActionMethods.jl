@@ -21,6 +21,20 @@ struct MultipleStopCondition <: StoppingCondition
 end
 
 """
+    compare_MultipleStopCondition(a::MultipleStopCondition,
+                                  b::MultipleStopCondition)::Bool
+
+Return true if the conditions within a multiple stop condition type are
+valued the same, mainly used for testing.
+
+TODO: make equality independent of vector order.
+"""
+function compare_MultipleStopCondition(a::MultipleStopCondition,
+                                       b::MultipleStopCondition)::Bool
+    return a.conditions == b.conditions
+end
+
+"""
     stopcondition(v::WorkingVars, checks::MultipleStopCondition)
 
 Checks if any conditions with a MultipleStopCondition type are met.
