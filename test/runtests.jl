@@ -2,6 +2,7 @@ using RowActionMethods
 using LinearAlgebra
 using Test
 
+include("example_qp.jl")
 
 """
     RowActionMethodStandardTests(method::T,
@@ -23,40 +24,47 @@ similar check on a simple problem with the needed setup.
 function RowActionMethodStandardTests(method::T; 
                                       run_answer_check=true
                                      ) where T<:RowActionMethods.RowActionMethod
-    testset_name = string(typeof(method))
+    testset_name = string(typeof(method), "_Standard")
     #TODO move these example problems to tests 
-    question = RowActionMethods.example_1()
+    question = example_1()
     p = question["prob"]
     a = question["ans"]
     
     @testset "$testset_name" begin
         model = Optimizer(method)
         @testset "Optimizer" begin
+            #Check model is correct type
             @test typeof(model) <: RowActionMethods.ModelFormulation
         end
 
         buildmodel!(model, p...)
         @testset "BuildModel" begin
+            #Check model is initialised with 0 iterations
             @test RowActionMethods.get_iterations(model) == 0
+            #Check that an answer isn't present if no iterations have run
             #Suggestions on a more appropriate error are welcome
             @test_throws ErrorException answer(model)
         end
 
         @testset "Single Iteration" begin
-             RowActionMethods.iterate!(model)
-             @test RowActionMethods.get_iterations(model) == 1
+            RowActionMethods.iterate!(model)
+            #Check an iteration updates common working variables
+            @test RowActionMethods.get_iterations(model) == 1
         end
 
 
         @testset "Iterations Stop Condition" begin
+            #Check that iteration stops on a given limit
             iterations_condition = SC_Iterations(11)  
             iterate_model!(model, iterations_condition)
             @test RowActionMethods.get_iterations(model) == 11
 
+            #Check that no iterations are performed if the limit is reached
             iterations_condition = SC_Iterations(5)
             iterate_model!(model, iterations_condition)
             @test RowActionMethods.get_iterations(model) == 11
 
+            #Check that more iterations are performed on a limit update
             iterations_condition = SC_Iterations(20)
             iterate_model!(model, iterations_condition)
             @test RowActionMethods.get_iterations(model) == 20
@@ -70,5 +78,5 @@ function RowActionMethodStandardTests(method::T;
     end
 end
 
-RowActionMethodStandardTests(Hildreth())
-RowActionMethodStandardTests(ExtendedHildreth())
+include("test_Hildreth.jl")
+include("test_ExtendedHildreth.jl")

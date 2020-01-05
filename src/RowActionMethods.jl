@@ -14,7 +14,6 @@ using LinearAlgebra
 
 export iterate_model!, Optimizer, buildmodel!, answer
 
-include("./example_qp.jl")
 include("./Types.jl")
 include("./StopConditions.jl")
 include("./Hildreth.jl")
