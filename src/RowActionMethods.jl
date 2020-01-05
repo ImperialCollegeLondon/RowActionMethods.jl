@@ -12,7 +12,7 @@ Subject to the constraints: Mx <= γ
 
 using LinearAlgebra
 
-export iterate_model!, Optimizer, buildmodel!, answer
+export iterate_model!, Optimizer, buildmodel!, answer, get_SC
 
 include("./Types.jl")
 include("./StopConditions.jl")
@@ -24,9 +24,10 @@ include("./ExtendedHildreth.jl")
 
 Helper function to form a list of stopping conditions.
 """
-function get_SC(conditions...)::MultipleStopCondition
+function get_SC(conditions::StoppingCondition...)::MultipleStopCondition
     return MultipleStopCondition(collect(conditions))
 end
+
 
 """
     iterate_model!(model::ModelFormulation)

@@ -139,7 +139,7 @@ function get_iterations(model::HildrethModel)::Int
 end
 
 """
-    resolver(vars::WorkingVars, model::HildrethModel)
+    resolver!(model::HildrethModel)
 
 Calculates the primal result after convergence is met with the equation:
 
