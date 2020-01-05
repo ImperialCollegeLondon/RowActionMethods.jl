@@ -4,7 +4,8 @@ This package contains a number of solvers defined as row-action methods. They sh
 
 ## API Example
 
-A simple example using the basic Hildreth solver. The variables E, F, m, and g represent the vectors/matrices within a standard QP problem. All current solvers are designed for QP problems and are built with these 4 numbers, but this is not guaranteed in future. 
+A simple example using the basic Hildreth solver. All current solvers are designed for QP problems and are built with these 4 numbers, but this is not guaranteed in future. The variables E, F, m, and g refer to a QP problem in the form min ½(x'Ex)+F'x s.t. Mx≦g.
+
 ```julia
 using HildrethSolver
 
@@ -38,7 +39,9 @@ conditions = get_SC(convergence_condition, iteration_condition)
 iterate_model!(m, conditions)
 ```
 
-As can be seen, two new conditions are defined, combined into a single variable, and passed into the iteration function. If the builtin conditions are not sufficient, then a new one can be defined. This requires a type and a function:
+## Defining Custom Stopping Conditions
+
+In the previous example two conditions are defined (a convergence condition, and an iteration condition) and passed into the iteration function. If the builtin conditions are not sufficient, then a new one can be defined. This requires a new type that inherits from the `StoppingCondition` abstract type, and a new method for the `stopcondition` function that evaluates the new type.
 
 ```julia
 #A new struct that must inherit from StoppingCondition
@@ -47,15 +50,30 @@ struct Custom_Convergence_Test <: StoppingCondition
     limit_value ::Float64
 end
 
-#A test function, it must take the model type of the solver it should act on, and the condition struct you have just defined.
-#It must return a bool. Note that the use of HildrethModel and the condition being checked is just for example. 
-function Custom_Convergence_Function(model::HildrethModel,
-                                     condition::Custom_Convergence_Test
-                                    )::Bool
+#The test function, the model its solver, and your new condition type.
+function stopcondition(model::HildrethModel,
+                       condition::Custom_Convergence_Test
+                      )::Bool
     return model.workingvars['λ'][0] < condition.limit_value
 end
 ```
 
+This new condition can now be used as if it was a builtin condition of the package:
 
- 
+```Julia 
+model = Optimizer(Hildreth())
+buildmodel!(model, E, F, m, g)
+
+#Create condition
+new_condition = Custom_Convergence_Test(0.12)
+iteration_condition = SC_Iterations(12)
+
+#Combine conditions
+conditions = get_SC(new_condition, iteration_condition)
+
+#The condition will be tested during iteration
+iterate_model!(m, conditions)
+```
+
+Please feel free to make a pull request of any useful stopping conditions so that they can be included by default.
 
