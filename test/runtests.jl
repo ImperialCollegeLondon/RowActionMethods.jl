@@ -45,6 +45,9 @@ after 20 iterations. 20 iterations should be sufficient for solving, but if
 this poses problems for a method then disable by passing false to
 run_answer_check. If this is done then please ensure your tests implement a 
 similar check on a simple problem with the needed setup.
+
+TODO: Add tests to check for behaviour with different kinds of input matrices,
+ideally should test every type that the `factorize()` function returns.  
 """
 function RowActionMethodStandardTests(method::T; 
                                       run_answer_check=true
