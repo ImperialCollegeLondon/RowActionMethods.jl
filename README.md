@@ -77,3 +77,10 @@ iterate_model!(m, conditions)
 
 Please feel free to make a pull request of any useful stopping conditions so that they can be included by default.
 
+
+## Known/Potential Issues
+These problems should be addressed as the testing increases in scope, but please raise an issue/make a pull request with any issues you find.
+
+- Method models may not account for the types returned by certain library functions (for example, LinearAlgebra.factorize). This will be addressed when a MOI interface is written to allow testing of a wider range of problems. 
+- Current testing has only used a limited set of small problems, it is very likely that you will run into issues when using the package for slightly more complex problems. Again this will be addressed when a wider range of problems are tested.
+
