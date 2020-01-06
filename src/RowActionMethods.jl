@@ -50,7 +50,7 @@ function iterate_model!(model::ModelFormulation,
                         conditions::StoppingCondition
                        )
     #Returns if unconstrained optimum is valid
-    if validmodel(model)
+    if valid_unconstrained(model)
         set_unconstrained!(model)
         return
     end

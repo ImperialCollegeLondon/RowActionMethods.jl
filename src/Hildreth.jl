@@ -1,3 +1,4 @@
+import Base.==
 export Hildreth
 
 struct Hildreth <: RowActionMethod end
@@ -25,7 +26,7 @@ mutable struct HildrethModel <: ModelFormulation
     K::Vector{Float64}
     ucSoln::Vector{Float64}
     Soln::Union{Vector{Float64},Nothing}
-    E_fact::Union{Factorization,Nothing}
+    E_fact::Union{Factorization,Array,Diagonal,Nothing}
     workingvars::WorkingVars
 end
 
@@ -33,7 +34,7 @@ end
 """
     Optimizer(::Hildreth)::HildrethModel
     
-Returns a seleton model of the problem for solving with the original Hildreth
+Returns a seleton model of the problem for solving with Hildreth's orignal
 method.
 """
 function Optimizer(::Hildreth)::HildrethModel
@@ -85,11 +86,29 @@ function buildmodel!(model::HildrethModel, E, F, M, γ)
 end
 
 """
-    validmodel(model::HildrethModel)::Bool
+    ==(a::HildrethModel, b::HildrethModel)::Bool
+
+Checks equality of two hildreth model structs. Does not check for object
+equality, only value equality.
+"""
+function ==(a::HildrethModel, b::HildrethModel)::Bool
+    return a.E == b.E &&
+           a.F == b.F &&
+           a.M == b.M &&
+           a.γ == b.γ &&
+           a.E_fact == b.E_fact &&
+           a.H == b.H &&
+           a.K == b.K &&
+           a.ucSoln == b.ucSoln &&
+           a.workingvars == b.workingvars
+end
+
+"""
+    valid_unconstrained(model::HildrethModel)::Bool
 
 Returns true if the initial minimum is within the constraints.
 """
-function validmodel(model::HildrethModel)::Bool
+function valid_unconstrained(model::HildrethModel)::Bool
     valid = model.M * model.ucSoln - model.γ
     for v in valid
         if v > 0

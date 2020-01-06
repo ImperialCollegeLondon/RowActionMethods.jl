@@ -168,7 +168,7 @@ end
 Method doesn't implement a prior check for viability, therefore function
 always returns false to ensure that solver runs. 
 """
-function validmodel(model::ExtendedHildrethModel)::Bool
+function valid_unconstrained(model::ExtendedHildrethModel)::Bool
     return false
 end
 
