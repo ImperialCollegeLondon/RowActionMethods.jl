@@ -32,12 +32,12 @@ end
 
 
 """
-    Optimizer(::Hildreth)::HildrethModel
+    GetModel(::Hildreth)::HildrethModel
     
 Returns a seleton model of the problem for solving with Hildreth's orignal
 method.
 """
-function Optimizer(::Hildreth)::HildrethModel
+function GetModel(::Hildreth)::HildrethModel
     return HildrethModel([],[],[],[],[],[],[],
                          Nothing(),Nothing(), 
                          Dict("iterations"=>0))

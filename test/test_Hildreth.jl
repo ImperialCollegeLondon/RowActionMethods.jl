@@ -18,7 +18,7 @@
     question = problem["prob"]
     
     @testset "Model" begin
-        model = Optimizer(Hildreth()) 
+        model = GetModel(Hildreth()) 
         @test model == empty_model
         buildmodel!(model, question...)
         @test model == built_model

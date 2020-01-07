@@ -51,7 +51,7 @@ mutable struct ExtendedHildrethModel <: ModelFormulation
     z_initial::Union{Vector{Number}, Number}
 end
 """
-    Optimizer(::ExtendedHildreth, z_initial::Union{Vector{Number}, Number}, 
+    GetModel(::ExtendedHildreth, z_initial::Union{Vector{Number}, Number}, 
     relaxation_func::Function)::ExtendedHildrethModel
 
 Returns a skeleton model of the problem for solving with the extended Hildreth's modethod. 
@@ -60,7 +60,7 @@ z_initial is the initial value of the z dual variable. Any supplied vector shoul
 
 This method supports the inclusion of a relaxation parameter, this is a scaling that is applied on each iteration (see the original paper for details). This passed function should calculate the relaxation parameter value from the current iteration index. All resultant values should be close to 1 for convergence to hold. By default relaxation will be 1.
 """
-function Optimizer(::ExtendedHildreth, 
+function GetModel(::ExtendedHildreth, 
                    z_initial::Union{Vector{Number}, Number},
                    relaxation_func::Function
                   )::ExtendedHildrethModel
@@ -72,7 +72,7 @@ end
 
 #Better ideas on how to structure this are welcome 
 """
-    Optimizer(::ExtendedHildreth; options...)
+    GetModel(::ExtendedHildreth; options...)
 
 Optional arguments:
 z_initial - initial value for z to take, must be in 
@@ -80,7 +80,7 @@ the non-negative orthant of Rⁿ (defaults to vector of ones). Can be
 a vector (of the correct dimension for the problem) or a scalar multiplier of the vector of ones.
 relaxation - a value for the relaxation series to take, either a constant or a function to generate relaxation value from the iteration index. All values should be positive for convergence proof to hold.
 """
-function Optimizer(::ExtendedHildreth; options...)
+function GetModel(::ExtendedHildreth; options...)
     options = Dict(options)
     if haskey(options, "z_initial") 
         z=options["z_initial"]
@@ -101,7 +101,7 @@ function Optimizer(::ExtendedHildreth; options...)
         relaxation = (k->1)
     end
 
-    return Optimizer(ExtendedHildreth(), z, relaxation)
+    return GetModel(ExtendedHildreth(), z, relaxation)
 end
 
 function buildmodel!(model::ExtendedHildrethModel, B, d, G, h)

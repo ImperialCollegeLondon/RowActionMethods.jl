@@ -12,7 +12,7 @@ Subject to the constraints: Mx <= γ
 
 using LinearAlgebra
 
-export iterate_model!, Optimizer, buildmodel!, answer, get_SC
+export iterate_model!, GetModel, buildmodel!, answer, get_SC
 
 include("./Types.jl")
 include("./StopConditions.jl")

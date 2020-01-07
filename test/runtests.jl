@@ -59,8 +59,8 @@ function RowActionMethodStandardTests(method::T;
     a = question["ans"]
     
     @testset "$testset_name" begin
-        model = Optimizer(method)
-        @testset "Optimizer" begin
+        model = GetModel(method)
+        @testset "GetModel" begin
             #Check model is correct type
             @test typeof(model) <: RowActionMethods.ModelFormulation
         end

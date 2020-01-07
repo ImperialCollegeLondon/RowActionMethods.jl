@@ -10,7 +10,7 @@ A simple example using the basic Hildreth solver. All current solvers are design
 using HildrethSolver
 
 #Select an empty model from those available in the package
-model = Optimizer(Hildreth())
+model = GetModel(Hildreth())
 
 #Create the problem representation by adding in your problem variables to the solver
 buildmodel!(model, E, F, m, g)
@@ -22,7 +22,7 @@ iterate_model!(m)
 The API also offers more flexibility in stopping conditions. Note that (other than the iteration checker) each solver implements their own stopping conditions, and it is highly likely that a stopping condition for one solver will cause an error if applied to a different solver. There is currently no active check for this, so please ensure your types match. As an example of applying some limits:
 
 ```julia
-model = Optimizer(Hildreth())
+model = GetModel(Hildreth())
 buildmodel!(model, E, F, m, g)
 
 #A single condition that checks the convergence values of the solver on each iteration, and terminates if it is met
@@ -61,7 +61,7 @@ end
 This new condition can now be used as if it was a builtin condition of the package:
 
 ```Julia 
-model = Optimizer(Hildreth())
+model = GetModel(Hildreth())
 buildmodel!(model, E, F, m, g)
 
 #Create condition
