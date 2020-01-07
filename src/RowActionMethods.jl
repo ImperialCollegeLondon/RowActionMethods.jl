@@ -16,8 +16,16 @@ export iterate_model!, GetModel, buildmodel!, answer, get_SC
 
 include("./Types.jl")
 include("./StopConditions.jl")
+include("./MOI_wrapper.jl")
+
+#Method includes 
 include("./Hildreth.jl")
 include("./ExtendedHildreth.jl")
+
+#Maps strings to method types
+method_mapping= Dict("Hildreth" => Hildreth(),
+                     "ExtendedHildreth" => ExtendedHildreth(),
+                    )
 
 """
     get_SC(constraints...)
