@@ -127,6 +127,13 @@ function set_unconstrained!(model::HildrethModel)
     model.Soln = model.ucSoln
 end
 
+function is_empty(model::HildrethModel)
+    return model.E == [] &&
+           model.F == [] &&
+           model.M == [] &&
+           model.γ == []
+end
+
 """
     SC_HildrethConvergence(limit)
 
