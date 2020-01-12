@@ -57,8 +57,8 @@ function iterate!(model::HildrethModel)
     H = model.H
     K = model.K
     
-    for i = 1:size(λ)[1]
-        w = (H[i:i,:] * λ)[1] - H[i,i] * λ[i]
+    for (i,l) in enumerate(λ)
+        w = (H[i:i,:] * λ)[1] - H[i,i] * l
         w += K[i]
         w /= -H[i,i]
         λ[i] = max(0, w)
