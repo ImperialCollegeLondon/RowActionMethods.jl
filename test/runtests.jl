@@ -2,6 +2,8 @@ using RowActionMethods
 using LinearAlgebra
 using Test
 
+const RAM = RowActionMethods
+
 include("example_qp.jl")
 
 @testset "RowActionCore" begin
@@ -10,22 +12,22 @@ include("example_qp.jl")
         b = SC_Iterations(10)
         c = SC_Iterations(15)
 
-        result_1 = MultipleStopCondition(RowActionMethods.StoppingCondition[
+        result_1 = MultipleStopCondition(RAM.StoppingCondition[
                                          SC_Iterations(5)
                                          ])
-        result_2 = MultipleStopCondition(RowActionMethods.StoppingCondition[
+        result_2 = MultipleStopCondition(RAM.StoppingCondition[
                                          SC_Iterations(5),
                                          SC_Iterations(10)
                                          ])
-        result_3 = MultipleStopCondition(RowActionMethods.StoppingCondition[
+        result_3 = MultipleStopCondition(RAM.StoppingCondition[
                                          SC_Iterations(5),
                                          SC_Iterations(10),
                                          SC_Iterations(15)
                                          ])
 
-        @test RowActionMethods.compare_MultipleStopCondition(get_SC(a), result_1)
-        @test RowActionMethods.compare_MultipleStopCondition(get_SC(a, b), result_2)
-        @test RowActionMethods.compare_MultipleStopCondition(get_SC(a, b, c), result_3)
+        @test RAM.compare_MultipleStopCondition(get_SC(a), result_1)
+        @test RAM.compare_MultipleStopCondition(get_SC(a, b), result_2)
+        @test RAM.compare_MultipleStopCondition(get_SC(a, b, c), result_3)
     end
 end
 
@@ -51,7 +53,7 @@ ideally should test every type that the `factorize()` function returns.
 """
 function RowActionMethodStandardTests(method::T; 
                                       run_answer_check=true
-                                     ) where T<:RowActionMethods.RowActionMethod
+                                     ) where T<:RAM.RowActionMethod
     testset_name = string(typeof(method), "_Standard")
     #TODO move these example problems to tests 
     question = example_1()
@@ -62,22 +64,22 @@ function RowActionMethodStandardTests(method::T;
         model = GetModel(method)
         @testset "GetModel" begin
             #Check model is correct type
-            @test typeof(model) <: RowActionMethods.ModelFormulation
+            @test typeof(model) <: RAM.ModelFormulation
         end
 
         buildmodel!(model, p...)
         @testset "BuildModel" begin
             #Check model is initialised with 0 iterations
-            @test RowActionMethods.get_iterations(model) == 0
+            @test RAM.get_iterations(model) == 0
             #Check that an answer isn't present if no iterations have run
             #Suggestions on a more appropriate error are welcome
             @test_throws ErrorException answer(model)
         end
 
         @testset "Single Iteration" begin
-            RowActionMethods.iterate!(model)
+            RAM.iterate!(model)
             #Check an iteration updates common working variables
-            @test RowActionMethods.get_iterations(model) == 1
+            @test RAM.get_iterations(model) == 1
         end
 
 
@@ -85,17 +87,17 @@ function RowActionMethodStandardTests(method::T;
             #Check that iteration stops on a given limit
             iterations_condition = SC_Iterations(11)  
             iterate_model!(model, iterations_condition)
-            @test RowActionMethods.get_iterations(model) == 11
+            @test RAM.get_iterations(model) == 11
 
             #Check that no iterations are performed if the limit is reached
             iterations_condition = SC_Iterations(5)
             iterate_model!(model, iterations_condition)
-            @test RowActionMethods.get_iterations(model) == 11
+            @test RAM.get_iterations(model) == 11
 
             #Check that more iterations are performed on a limit update
             iterations_condition = SC_Iterations(20)
             iterate_model!(model, iterations_condition)
-            @test RowActionMethods.get_iterations(model) == 20
+            @test RAM.get_iterations(model) == 20
         end
 
        if run_answer_check
@@ -106,5 +108,6 @@ function RowActionMethodStandardTests(method::T;
     end
 end
 
+include("test_MOI_wrapper.jl")
 include("test_Hildreth.jl")
 include("test_ExtendedHildreth.jl")
