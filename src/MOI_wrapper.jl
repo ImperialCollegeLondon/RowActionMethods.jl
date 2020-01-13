@@ -1,6 +1,7 @@
 import MathOptInterface
 
 const MOI = MathOptInterface
+const MOIU = MOI.Utilities
 const RAM = RowActionMethods
 
 mutable struct Optimizer <: MOI.AbstractOptimizer
@@ -8,9 +9,11 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     method::RAM.RowActionMethod
     inner_model::RAM.ModelFormulation
     sense::MOI.OptimizationSense
-    Name::String
+    name::String
 
     variable_count::Int
+
+    silent::Bool #True means nothing should be printed
 
     function Optimizer(method::String;kwargs...)
         model = new()
@@ -20,9 +23,10 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
                                 " methods are: $(keys(RAM.method_mapping))"))
         end
         
-        model.Name = "RowActionMethods-$method"
+        model.name = "RowActionMethods-$method"
         model.method = RAM.method_mapping[method]
         model.inner_model = GetModel(model.method)
+        model.silent= false
 
         for (key, val) in kwargs
             MOI.set(model, MOI.RawParameter(String(key)), val)
@@ -34,21 +38,54 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     end
 end
 
+#= Model Actions =#
+function MOI.optimize!(model::Optimizer)
+    RAM.buildmodel!(model.inner_model)
+    RAM.iterate_model!(model.inner_model)
+end
+
+#= Model Status =#
 function MOI.supports(::Optimizer, 
                       ::MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}})
     return true
 end
 
+function MOI.is_empty(model::Optimizer)::Bool
+    return RAM.is_empty(model.inner_model)
+end
+
+#= Model special set functions =#
 function MOI.empty!(model)
     model.variable_count = 0
 end
 
+#= Variables =#
 function MOI.add_variables(model::Optimizer, n::Int)::Vector{MOI.VariableIndex}
     model.variable_count = n
     
     return [MOI.VariableIndex(i) for i in 1:n]
 end
 
+#= Constraints =#
+function MOI.add_constraint(model::Optimizer, 
+                            func::MOI.ScalarAffineFunction{T}, 
+                            lim::MOI.LessThan{T}) where T
+    #TODO: Raise error on non-zero valued constant in func
+    constraint_function = zeros(model.variable_count)
+    for t in func.terms
+        constraint_function[t.variable_index.value] = t.coefficient
+    end
+
+    RAM.setconstraints!(model.inner_model, constraint_function, lim.upper)
+end
+
+function MOI.add_constraint(model::Optimizer,
+                            func::MOI.ScalarAffineFunction,
+                            lim::MOI.GreaterThan)
+    MOI.add_constraint(model, func, MOI.LessThan(-lim.lower))
+end
+
+#= MOI.set functions =#
 function MOI.set(model::Optimizer, 
                  ::MOI.ObjectiveFunction{F}, 
                  val::F) where {F <: MOI.ScalarQuadraticFunction{Float64}} 
@@ -67,43 +104,20 @@ function MOI.set(model::Optimizer,
     setfunction!(model.inner_model, Q, a)
 end
 
-#=
-function MOI.add_constraint(model::Optimizer,
-                            func_list::Array{MOI.ScalarAffineFunction{T}, 1},
-                            lim_list::Array{S{T}, 1}) where {T, S<:MOI.AbstractScalarSet}
-    if sizeof(func_list)[1] != sizeof(lim_list[1])
-        throw(BoundsError("The number of constaint equations must match the number of constraint inequalities."))
-    end
-
-    for constraint in zip(func_list, lim_list)
-        MOI.add_constraint(model, constraint[1], constraint[2])
-    end
-end
-=#
-
-function MOI.add_constraint(model::Optimizer, 
-                            func::MOI.ScalarAffineFunction, 
-                            lim::MOI.LessThan)
-    #TODO: Raise error on non-zero valued constant in func
-    constraint_function = zeros(model.variable_count)
-    for t in func.terms
-        constraint_function[t.variable_index.value] = t.coefficient
-    end
-
-    setconstraints!(model.inner_model, constraint_function, lim.upper)
+function MOI.set(model::Optimizer, ::MOI.Silent, val::Bool)
+    model.silent = val
 end
 
-function MOI.add_constraint(model::Optimizer,
-                            func::MOI.ScalarAffineFunction,
-                            lim::MOI.GreaterThan)
-    MOI.add_constraint(model, func, MOI.LessThan(-lim))
+#= MOI.get functions =#
+function MOI.get(model::Optimizer, ::MOI.SolverName)::String
+    return model.name
 end
 
-function MOI.is_empty(model::Optimizer)::Bool
-    return RAM.is_empty(model.inner_model)
+#= MOI Copy Functions =#
+function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike; kws...)
+    return MOI.Utilities.automatic_copy_to(dest, src; kws...)
 end
 
-function MOI.optimize!(model::Optimizer)
-    RAM.buildmodel!(model.inner_model)
-    RAM.iterate_model!(model.inner_model)
-end
+MOIU.supports_default_copy_to(model::Optimizer, copy_names::Bool) = true
+
+
