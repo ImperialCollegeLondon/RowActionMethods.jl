@@ -26,10 +26,9 @@ mutable struct HildrethModel <: ModelFormulation
     K::Vector{Float64}
     ucSoln::Vector{Float64}
     Soln::Union{Vector{Float64},Nothing}
-    E_fact::Union{Factorization,Array,Diagonal,Nothing}
-    workingvars::WorkingVars
+    E_fact::Union{Bidiagonal,Factorization,Array,Diagonal,Nothing}
+    workingvars::Dict{String, Any}
 end
-
 
 """
     GetModel(::Hildreth)::HildrethModel
@@ -68,19 +67,53 @@ function iterate!(model::HildrethModel)
 end
 
 """
+    setobjective!(model::HildrethModel, E::Array{T, 2}, F::Vector{T}) where T
+
+Sets the objective function for the problem. Hildreth's algorithm requires that 
+E is positive definite, and the dimensions of both to match the number of variables
+defined in the problem (if using the MOI/JuMP interface this should be enforced).
+"""
+function setobjective!(model::HildrethModel, E::Array{T, 2}, F::Vector{T}) where T
+    model.E = E
+    model.F = F
+end
+
+"""
+    setconstriant!(model::HildrethModel, M_row::Vector{T}, lim::T) where T
+
+Adds a less-than constraint to the model. For the constraint Mx ≦ γ this adds 
+one row to the M matrix, and a new entry to the γ vector.o
+
+Returns a UID value that the solver can use to map to the value if modifying,
+viewing, or deleting the values. In this case the UID refers to a row of the constraint/limit matrices.
+
+TODO: Change indexing to be independent of the number of existing entries
+"""
+function setconstraint!(model::HildrethModel, M_row::Vector{T}, lim::T)::Int where T
+    if isempty(model.M)
+        model.M = M_row'
+    else
+        model.M = [model.M; M_row']
+    end
+    append!(model.γ, lim)
+    return size(model.γ)[1]
+end
+
+"""
     buildmodel(E, F, M, γ, ::Hildreth)
 
 Returns the problem model for the original Hildreth method.
 """
+
+function buildmodel!(model::HildrethModel)
+    buildmodel!(model, model.E, model.F, model.M, model.γ)
+end
+
 function buildmodel!(model::HildrethModel, E, F, M, γ)
-    model.E = E
-    model.F = F
-    model.M = M
-    model.γ = γ
-    model.E_fact = factorize(E)
-    model.H = M * (model.E_fact\transpose(M))
-    model.K = γ + (M * (model.E_fact\F))
-    model.ucSoln = -(model.E_fact\F)
+    model.E_fact = factorize(model.E)
+    model.H = model.M * (model.E_fact\transpose(model.M))
+    model.K = model.γ + (model.M * (model.E_fact\F))
+    model.ucSoln = -(model.E_fact\model.F)
     model.workingvars["λ"] = zeros(size(model.γ))
     model.workingvars["λ_old"] = zeros(size(model.γ))
 end
@@ -148,7 +181,7 @@ struct SC_HildrethConvergence <: StoppingCondition
 end
 
 """
-    stopcondition(vars::WorkingVars, convergence::SC_HildrethConvergence)
+    stopcondition(model::HildrethModel, convergence::SC_HildrethConvergence)
 
 Convergence checking for original Hildreth implementation.
 """
@@ -191,3 +224,6 @@ function answer(model::HildrethModel)
         return model.Soln
     end
 end
+
+
+

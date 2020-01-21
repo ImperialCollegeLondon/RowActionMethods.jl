@@ -109,5 +109,5 @@ function RowActionMethodStandardTests(method::T;
 end
 
 include("test_MOI_wrapper.jl")
-include("test_Hildreth.jl")
-include("test_ExtendedHildreth.jl")
+#include("test_Hildreth.jl")
+#include("test_ExtendedHildreth.jl")

@@ -1,7 +1,9 @@
+using DataStructures
 import MathOptInterface
 
 const MOI = MathOptInterface
 const MOIU = MOI.Utilities
+const MOIB = MOI.Bridges
 const RAM = RowActionMethods
 
 mutable struct Optimizer <: MOI.AbstractOptimizer
@@ -12,6 +14,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     name::String
 
     variable_count::Int
+    constraint_count::DefaultDict{String,Vector{MOI.ConstraintIndex}}
 
     silent::Bool #True means nothing should be printed
 
@@ -25,8 +28,10 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
         
         model.name = "RowActionMethods-$method"
         model.method = RAM.method_mapping[method]
-        model.inner_model = GetModel(model.method)
-        model.silent= false
+        model.silent = false
+        model.variable_count = 0
+        model.constraint_count = DefaultDict{String,Vector{MOI.ConstraintIndex}}([])
+                                  
 
         for (key, val) in kwargs
             MOI.set(model, MOI.RawParameter(String(key)), val)
@@ -46,8 +51,18 @@ end
 
 #= Model Status =#
 function MOI.supports(::Optimizer, 
-                      ::MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}})
+                      ::MOI.ObjectiveFunction{MOI.ScalarQuadraticFunction{Float64}})
     return true
+end
+
+#Note that this is a temporary measure, there is no reason to not support max but
+#at the time of writing it requires refactoring code that will break even more tests
+function MOI.supports(::Optimizer, sense::MOI.ObjectiveSense)::Bool
+    if sense == MOI.MAX_SENSE
+        return false
+    else
+        return true
+    end
 end
 
 function MOI.is_empty(model::Optimizer)::Bool
@@ -56,34 +71,52 @@ end
 
 #= Model special set functions =#
 function MOI.empty!(model)
+    model.inner_model = GetModel(model.method)
     model.variable_count = 0
+    #model.constraint_count = DefaultDict{String,Vector{MOI.ConstraintIndex}}([])
 end
 
 #= Variables =#
+function MOI.add_variable(model::Optimizer)::MOI.VariableIndex
+    model.variable_count += 1
+    return MOI.VariableIndex(model.variable_count)
+end
+
 function MOI.add_variables(model::Optimizer, n::Int)::Vector{MOI.VariableIndex}
-    model.variable_count = n
-    
-    return [MOI.VariableIndex(i) for i in 1:n]
+    return [MOI.add_variable(model) for i in 1:n]
 end
 
 #= Constraints =#
 function MOI.add_constraint(model::Optimizer, 
                             func::MOI.ScalarAffineFunction{T}, 
-                            lim::MOI.LessThan{T}) where T
+                            lim::MOI.LessThan{T})::MOI.ConstraintIndex where T
     #TODO: Raise error on non-zero valued constant in func
     constraint_function = zeros(model.variable_count)
     for t in func.terms
         constraint_function[t.variable_index.value] = t.coefficient
     end
 
-    RAM.setconstraints!(model.inner_model, constraint_function, lim.upper)
+    index = RAM.setconstraint!(model.inner_model, constraint_function, lim.upper)
+    constraint_index = MOI.ConstraintIndex{MOI.ScalarAffineFunction{Float64}, 
+                                           MOI.LessThan{Float64}}(index) 
+    push!(model.constraint_count["LessThan"], constraint_index)
+    return constraint_index
 end
 
-function MOI.add_constraint(model::Optimizer,
-                            func::MOI.ScalarAffineFunction,
-                            lim::MOI.GreaterThan)
-    MOI.add_constraint(model, func, MOI.LessThan(-lim.lower))
+function MOI.supports_constraint(model::Optimizer,
+                                 ::Type{MOI.ScalarAffineFunction{T}},
+                                 ::Type{MOI.LessThan{T}})::Bool where T
+    return true
 end
+
+function MOI.supports_constraint(model::Optimizer,
+                                 ::Type{MOI.VectorOfVariables},
+                                 ::Type{MOI.Reals})::Bool 
+    return true
+end
+
+
+
 
 #= MOI.set functions =#
 function MOI.set(model::Optimizer, 
@@ -101,16 +134,32 @@ function MOI.set(model::Optimizer,
         a[t.variable_index.value] = t.coefficient
     end
 
-    setfunction!(model.inner_model, Q, a)
+    setobjective!(model.inner_model, Q, a)
 end
 
 function MOI.set(model::Optimizer, ::MOI.Silent, val::Bool)
     model.silent = val
 end
 
+function MOI.set(model::Optimizer, ::MOI.ObjectiveSense, val::MOI.OptimizationSense)
+    if val == MOI.MAX_SENSE
+        throw(MathOptInterface.SetAttributeNotAllowed("Cannot set MAX objective sense right now, this should be resolved in the future"))
+    end
+end
+
 #= MOI.get functions =#
 function MOI.get(model::Optimizer, ::MOI.SolverName)::String
     return model.name
+end
+
+function MOI.get(model::Optimizer, ::MOI.NumberOfVariables)::Int
+    return model.variable_count
+end
+
+function MOI.get(model::Optimizer, 
+                 ::MOI.NumberOfConstraints{MOI.ScalarAffineFunction{T},
+                                           MOI.LessThan{T}})::Int where T
+    return model.constraint_count["LessThan"]
 end
 
 #= MOI Copy Functions =#
