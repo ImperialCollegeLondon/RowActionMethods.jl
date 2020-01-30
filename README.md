@@ -35,6 +35,7 @@ optimize!(model)
 println("x[1]: ", JuMP.value(x[1]))
 println("x[2]: ", JuMP.value(x[2]))
 println("x[3]: ", JuMP.value(x[3]))
+#Returning objective value is currently unsupported
 #println("objv: ", objective_value(model))
 ```
 
