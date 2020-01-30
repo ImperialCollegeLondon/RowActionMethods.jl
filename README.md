@@ -42,9 +42,9 @@ println("x[3]: ", JuMP.value(x[3]))
 The API also offers more flexibility in stopping conditions. However these are not currently implemented when using JuMP, this will be coming shortly.
 
 ## Installation
-Clone this git repository and activate it as your current environment in Julia's REPL, e.g. if your terminal is in the directory the repository was cloned to `using Pkg; Pkg.activate("./RowActionMethods.jl").
+Clone this git repository and activate it as your current environment in Julia's REPL, e.g. if your terminal is in the directory the repository was cloned to `using Pkg; Pkg.activate("./RowActionMethods.jl")`.
 
-Normal installatino with `Pkg` will hopefully come in time.
+Normal installation with `Pkg` will hopefully come in time.
 
 ## Contribution
 If you run into any issues, or want to use some specific features of JuMP that aren't available, please raise an issue.
