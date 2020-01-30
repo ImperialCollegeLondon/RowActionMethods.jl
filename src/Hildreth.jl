@@ -28,6 +28,15 @@ mutable struct HildrethModel <: ModelFormulation
     Soln::Union{Vector{Float64},Nothing}
     E_fact::Union{Bidiagonal,Factorization,Array,Diagonal,Nothing}
     workingvars::Dict{String, Any}
+    termination_condition::internal_termination_conditions
+end
+
+function get_termination_status(model::HildrethModel)::internal_termination_conditions
+    return model.termination_condition
+end
+
+function set_termination_status!(model::HildrethModel, status::internal_termination_conditions)
+    return model.termination_condition = status
 end
 
 """
@@ -39,7 +48,8 @@ method.
 function GetModel(::Hildreth)::HildrethModel
     return HildrethModel([],[],[],[],[],[],[],
                          Nothing(),Nothing(), 
-                         Dict("iterations"=>0))
+                         Dict("iterations"=>0),
+                         RAM_OPTIMIZE_NOT_CALLED)
 end
 
 """
@@ -72,6 +82,11 @@ end
 Sets the objective function for the problem. Hildreth's algorithm requires that 
 E is positive definite, and the dimensions of both to match the number of variables
 defined in the problem (if using the MOI/JuMP interface this should be enforced).
+
+Currently store all matrices in a standard format. As row action matrices are
+intended for sparse matrices, this should probably be the type used. In addition,
+we have a requirement for positive definite matrices, this is assumed in insertion
+and should be checked. 
 """
 function setobjective!(model::HildrethModel, E::Array{T, 2}, F::Vector{T}) where T
     model.E = E
@@ -100,19 +115,15 @@ function setconstraint!(model::HildrethModel, M_row::Vector{T}, lim::T)::Int whe
 end
 
 """
-    buildmodel(E, F, M, γ, ::Hildreth)
+    buildmodel(model::HildrethModel)
 
-Returns the problem model for the original Hildreth method.
+Builds the internal variables based on problem specification
 """
-
 function buildmodel!(model::HildrethModel)
-    buildmodel!(model, model.E, model.F, model.M, model.γ)
-end
-
-function buildmodel!(model::HildrethModel, E, F, M, γ)
-    model.E_fact = factorize(model.E)
+    #model.E_fact = factorize(model.E)
+    model.E_fact = cholesky(model.E)
     model.H = model.M * (model.E_fact\transpose(model.M))
-    model.K = model.γ + (model.M * (model.E_fact\F))
+    model.K = model.γ + (model.M * (model.E_fact\model.F))
     model.ucSoln = -(model.E_fact\model.F)
     model.workingvars["λ"] = zeros(size(model.γ))
     model.workingvars["λ_old"] = zeros(size(model.γ))
@@ -190,7 +201,7 @@ function stopcondition(model::HildrethModel,
                        )::Bool
     λ = model.workingvars["λ"]
     λ_old = model.workingvars["λ_old"]
-    return (λ-λ_old)' * (λ-λ_old) < convergence.value
+    return (λ-λ_old)' * (λ-λ_old) < convergence.value, RAM_OPTIMAL
 end
 
 function get_iterations(model::HildrethModel)::Int

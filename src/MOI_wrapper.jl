@@ -57,13 +57,7 @@ end
 
 #Note that this is a temporary measure, there is no reason to not support max but
 #at the time of writing it requires refactoring code that will break even more tests
-function MOI.supports(::Optimizer, sense::MOI.ObjectiveSense)::Bool
-    if sense == MOI.MAX_SENSE
-        return false
-    else
-        return true
-    end
-end
+MOI.supports(::Optimizer, ::MOI.ObjectiveSense) = true
 
 function MOI.is_empty(model::Optimizer)::Bool
     return RAM.is_empty(model.inner_model)
@@ -116,8 +110,6 @@ function MOI.supports_constraint(model::Optimizer,
 end
 
 
-
-
 #= MOI.set functions =#
 function MOI.set(model::Optimizer, 
                  ::MOI.ObjectiveFunction{F}, 
@@ -128,6 +120,7 @@ function MOI.set(model::Optimizer,
     
     for t in val.quadratic_terms
         Q[t.variable_index_1.value, t.variable_index_2.value] = t.coefficient
+        Q[t.variable_index_2.value, t.variable_index_1.value] = t.coefficient
     end
 
     for t in val.affine_terms
@@ -142,9 +135,7 @@ function MOI.set(model::Optimizer, ::MOI.Silent, val::Bool)
 end
 
 function MOI.set(model::Optimizer, ::MOI.ObjectiveSense, val::MOI.OptimizationSense)
-    if val == MOI.MAX_SENSE
-        throw(MathOptInterface.SetAttributeNotAllowed("Cannot set MAX objective sense right now, this should be resolved in the future"))
-    end
+    model.sense = val
 end
 
 #= MOI.get functions =#
@@ -160,6 +151,29 @@ function MOI.get(model::Optimizer,
                  ::MOI.NumberOfConstraints{MOI.ScalarAffineFunction{T},
                                            MOI.LessThan{T}})::Int where T
     return model.constraint_count["LessThan"]
+end
+
+#Maps internal RAM termination conditions to MOI equivalents
+RAM_MOI_Termination_Map = Dict(
+RAM.RAM_OPTIMIZE_NOT_CALLED => MOI.OPTIMIZE_NOT_CALLED,
+RAM.RAM_OPTIMAL             => MOI.OPTIMAL,
+RAM.RAM_INFEASIBLE          => MOI.INFEASIBLE,
+RAM.RAM_ITERATION_LIMIT     => MOI.ITERATION_LIMIT,  
+RAM.RAM_TIME_LIMIT          => MOI.TIME_LIMIT
+)
+
+function MOI.get(model::Optimizer, ::MOI.TerminationStatus)
+    return RAM_MOI_Termination_Map[RAM.get_termination_status(model.inner_model)]
+end
+
+#function MOI.get(model::Optimizer, ::MOI.ObjectiveValue)
+#    sense = (model.sense == MOI.MAX_SENSE) ? -1 : 1
+#    return sense * RAM.answer(model.inner_model)
+#end
+
+function MOI.get(model::Optimizer, var::MOI.VariablePrimal, vi::MOI.VariableIndex)
+    sense = (model.sense == MOI.MAX_SENSE) ? -1 : 1
+    return sense * RAM.answer(model.inner_model)[vi.value]
 end
 
 #= MOI Copy Functions =#

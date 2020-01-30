@@ -58,16 +58,17 @@ function iterate_model!(model::ModelFormulation,
                         conditions::StoppingCondition
                        )
     #Returns if unconstrained optimum is valid
-    if valid_unconstrained(model)
-        set_unconstrained!(model)
-        return
-    end
+    #if valid_unconstrained(model)
+    #    println("Valid uncons")
+    #    set_unconstrained!(model)
+    #    return
+    #end
     
     #Returns if stopping conditions are already met
-    if stopcondition(model, conditions) return end
+    #if stopcondition(model, conditions) return end
 
     #Run iterations until stop conditions are met
-    while !stopcondition(model, conditions) 
+    while !check_stopcondition!(model, conditions) 
         iterate!(model)
     end
 
