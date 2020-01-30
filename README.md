@@ -2,85 +2,49 @@
 
 This package contains a number of solvers defined as row-action methods. They share a common API, but each method will have specific problem features it benefits from over others. 
 
+Current supported solvers:
+
+- Hildreth : an implementation of Hildreth's method, designed for QP problems with linear constraints. Has a minimal working JuMP interface. Tested with small problems, but no guarantees on precision or stability.
+
 ## API Example
 
-A simple example using the basic Hildreth solver. All current solvers are designed for QP problems and are built with these 4 numbers, but this is not guaranteed in future. The variables E, F, m, and g refer to a QP problem in the form min ½(x'Ex)+F'x s.t. Mx≦g.
+A simple example using the Hildreth solver. The variables E, F, m, and γ refer to a QP problem in the form min ½(x'Ex)+F'x s.t. Mx≦γ.
 
 ```julia
-using HildrethSolver
+using JuMP
+using RowActionMethods
 
-#Select an empty model from those available in the package
-model = GetModel(Hildreth())
+const RAM = RowActionMethods
 
-#Create the problem representation by adding in your problem variables to the solver
-buildmodel!(model, E, F, m, g)
+model = Model(with_optimizer(RAM.Optimizer, "Hildreth"))
 
-#Repeatedly iterate the model until a stopping condition is met, by default 32 iterations
-iterate_model!(m)
+@variable(model, x[1:3])
+
+E=[2 3 2; 3 7 5; 2 5 4]
+F=[4;7;3]
+M=[-1 0 2; 0 -1 3; 3 2 4]
+γ=[0;0;4]
+
+
+@objective(model, Min, 0.5sum(x[i]*E[i,j]*x[j] for i=1:3, j=1:3) + sum(F[i]*x[i] for i=1:3))
+@constraint(model, M[1,1]x[1] + M[1,2]x[2] + M[1,3]x[3]<= γ[1])
+@constraint(model, M[2,1]x[1] + M[2,2]x[2] + M[2,3]x[3]<= γ[2])
+@constraint(model, M[3,1]x[1] + M[3,2]x[2] + M[3,3]x[3]<= γ[3])
+
+optimize!(model)
+println("x[1]: ", JuMP.value(x[1]))
+println("x[2]: ", JuMP.value(x[2]))
+println("x[3]: ", JuMP.value(x[3]))
+#println("objv: ", objective_value(model))
 ```
 
-The API also offers more flexibility in stopping conditions. Note that (other than the iteration checker) each solver implements their own stopping conditions, and it is highly likely that a stopping condition for one solver will cause an error if applied to a different solver. There is currently no active check for this, so please ensure your types match. As an example of applying some limits:
+## Custom Stopping Conditions
+The API also offers more flexibility in stopping conditions. However these are not currently implemented when using JuMP, this will be coming shortly.
 
-```julia
-model = GetModel(Hildreth())
-buildmodel!(model, E, F, m, g)
+## Installation
+Clone this git repository and activate it as your current environment in Julia's REPL, e.g. if your terminal is in the directory the repository was cloned to `using Pkg; Pkg.activate("./RowActionMethods.jl").
 
-#A single condition that checks the convergence values of the solver on each iteration, and terminates if it is met
-convergence_condition = SC_HildrethConvergence(1e-7)
+Normal installatino with `Pkg` will hopefully come in time.
 
-#A single condition that applies a new limit of 12 on the number of iterations
-iteration_condition = SC_Iterations(12)
-
-#Combines the conditions into a single value
-#Note that this is an alias for calling:
-#conditions = MultipleStopCondition([convergence_condition, iteration_condition])
-conditions = get_SC(convergence_condition, iteration_condition)
-
-iterate_model!(m, conditions)
-```
-
-## Defining Custom Stopping Conditions
-
-In the previous example two conditions are defined (a convergence condition, and an iteration condition) and passed into the iteration function. If the builtin conditions are not sufficient, then a new one can be defined. This requires a new type that inherits from the `StoppingCondition` abstract type, and a new method for the `stopcondition` function that evaluates the new type.
-
-```julia
-#A new struct that must inherit from StoppingCondition
-struct Custom_Convergence_Test <: StoppingCondition 
-    #The contents are the limits to be tested against on each iteration
-    limit_value ::Float64
-end
-
-#The test function, the model its solver, and your new condition type.
-function stopcondition(model::HildrethModel,
-                       condition::Custom_Convergence_Test
-                      )::Bool
-    return model.workingvars['λ'][0] < condition.limit_value
-end
-```
-
-This new condition can now be used as if it was a builtin condition of the package:
-
-```Julia 
-model = GetModel(Hildreth())
-buildmodel!(model, E, F, m, g)
-
-#Create condition
-new_condition = Custom_Convergence_Test(0.12)
-iteration_condition = SC_Iterations(12)
-
-#Combine conditions
-conditions = get_SC(new_condition, iteration_condition)
-
-#The condition will be tested during iteration
-iterate_model!(m, conditions)
-```
-
-Please feel free to make a pull request of any useful stopping conditions so that they can be included by default.
-
-
-## Known/Potential Issues
-These problems should be addressed as the testing increases in scope, but please raise an issue/make a pull request with any issues you find.
-
-- Method models may not account for the types returned by certain library functions (for example, LinearAlgebra.factorize). This will be addressed when a MOI interface is written to allow testing of a wider range of problems. 
-- Current testing has only used a limited set of small problems, it is very likely that you will run into issues when using the package for slightly more complex problems. Again this will be addressed when a wider range of problems are tested.
-
+## Contribution
+If you run into any issues, or want to use some specific features of JuMP that aren't available, please raise an issue.
