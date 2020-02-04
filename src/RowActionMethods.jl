@@ -17,6 +17,7 @@ export iterate_model!, GetModel, buildmodel!, answer, get_SC
 include("./Types.jl")
 include("./StopConditions.jl")
 include("./MOI_wrapper.jl")
+include("./Benchmarks.jl")
 
 #Method includes 
 include("./Hildreth.jl")
@@ -77,7 +78,6 @@ function iterate_model!(model::ModelFormulation,
 end
 
 function run_benchmarks()
-    include("./benchmarks.jl")
     run_all_benchmarks()
 end
 
