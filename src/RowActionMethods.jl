@@ -76,4 +76,9 @@ function iterate_model!(model::ModelFormulation,
     resolver!(model)
 end
 
+function run_benchmarks()
+    include("./benchmarks.jl")
+    run_all_benchmarks()
+end
+
 end # module
