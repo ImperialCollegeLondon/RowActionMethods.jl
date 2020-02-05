@@ -80,6 +80,19 @@ function MOI.add_variables(model::Optimizer, n::Int)::Vector{MOI.VariableIndex}
     return [MOI.add_variable(model) for i in 1:n]
 end
 
+#= Constrained Variables =#
+function MOI.add_constrained_variables(model::Optimizer, sets::MOI.LessThan)
+    for (i, set) in enumerate(sets)
+		variables[i] = MOI.add_variable(model)
+    end
+    for (i, set) in enumerate(sets)
+        constraints[i] = add_constrained_variable(model, set)
+    end
+    return variables, constraints
+end
+
+MOI.supports_add_constrained_variables(::Optimizer, ::Union{MOI.GreaterThan, MOI.LessThan}) = true
+
 #= Constraints =#
 function MOI.add_constraint(model::Optimizer, 
                             func::MOI.ScalarAffineFunction{T}, 
