@@ -47,5 +47,8 @@ Clone this git repository and activate it as your current environment in Julia's
 
 Normal installation with `Pkg` will hopefully come in time.
 
+## Known Limitations/Issues/Workarounds
+- MathOptInterface's method for adding constrained variables is incompatible with this package. To constrain a variable, declare it and then add a specific constraint.
+
 ## Contribution
 If you run into any issues, or want to use some specific features of JuMP that aren't available, please raise an issue.
