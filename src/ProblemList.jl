@@ -6,10 +6,13 @@ using JuMP
 function QLR2_AN_4_6()
 
   problem = Model()
-  @variable(problem, x[i=1:4] >= 0, start = 0)
-  #@variable(problem, x[i=1:4] >= 1, start = 0)
-  #@variable(problem, x[i=1:4])
-  
+  #@variable(problem, x[i=1:4] >= 0, start = 0)
+  @variable(problem, x[i=1:4])
+
+  @constraint(problem, x[1] >= 0)
+  @constraint(problem, x[2] >= 0)
+  @constraint(problem, x[3] >= 0)
+  @constraint(problem, x[4] >= 0)
 
   @constraint(problem, - 8 +   x[1] + 2*x[2] <= 0)
   @constraint(problem, -12 + 4*x[1] +   x[2] <= 0)

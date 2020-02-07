@@ -1,8 +1,7 @@
-using BenchmarkTools
+#using BenchmarkTools
+using JuMP
 
 include("ProblemList.jl")
-
-const RAM = RowActionMethods
 
 #Currently only using the problems available in OptimizationProblems repo for 
 #simplicity CUTEst naming convention is available here: 
@@ -18,7 +17,11 @@ function run_all_benchmarks()
 end
 
 function single_benchmark(problem)
-    prob = problem()
-    #Build problem build benchmark
-    @benchmark with_optimizer(RAM.Optimizer, "Hildreth")
+    prob, x = problem()
+
+    set_optimizer(prob, with_optimizer(Optimizer, "Hildreth"))
+    optimize!(prob)
+    for v in x
+        println(value(v))
+    end
 end
