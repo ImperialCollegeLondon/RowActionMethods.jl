@@ -115,8 +115,9 @@ function MOI.set(model::Optimizer,
                  ::MOI.ObjectiveFunction{F}, 
                  val::F) where {F <: MOI.ScalarQuadraticFunction{Float64}} 
 
-    Q = zeros(model.variable_count, model.variable_count)
-    a = zeros(model.variable_count)
+    num_vars = model.variable_count
+    Q = zeros(num_vars, num_vars)
+    a = zeros(num_vars)
     
     for t in val.quadratic_terms
         Q[t.variable_index_1.value, t.variable_index_2.value] = t.coefficient
@@ -127,7 +128,7 @@ function MOI.set(model::Optimizer,
         a[t.variable_index.value] = t.coefficient
     end
 
-    setobjective!(model.inner_model, Q, a)
+    setobjective!(model.inner_model, Q, a, num_vars)
 end
 
 function MOI.set(model::Optimizer, ::MOI.Silent, val::Bool)
