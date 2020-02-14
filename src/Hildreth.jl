@@ -252,7 +252,7 @@ function set_unconstrained!(model::HildrethModel)
 end
 
 function is_empty(model::HildrethModel)
-
+    #Best solution I could find quickly, probably better ways of doing it.
     E() = try
               return model.E
           catch UndefRefError
