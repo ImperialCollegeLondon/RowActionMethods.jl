@@ -31,6 +31,11 @@ method_mapping= Dict("Hildreth" => Hildreth(),
                      "ExtendedHildreth" => ExtendedHildreth(),
                     )
 
+function GetModel(model::String)::ModelFormulation
+    !haskey(method_mapping, model) && error("Invalid Solver")
+    GetModel(method_mapping[model])
+end
+
 """
     get_SC(constraints...)
 
