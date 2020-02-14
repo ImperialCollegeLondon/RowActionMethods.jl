@@ -14,6 +14,9 @@ using LinearAlgebra
 
 export iterate_model!, GetModel, buildmodel!, answer, get_SC
 
+const RAM = RowActionMethods
+export RAM
+
 include("./Types.jl")
 include("./StopConditions.jl")
 include("./MOI_wrapper.jl")
