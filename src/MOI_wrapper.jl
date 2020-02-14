@@ -90,7 +90,7 @@ function MOI.add_constraint(model::Optimizer,
         constraint_function[t.variable_index.value] = t.coefficient
     end
 
-    index = RAM.setconstraint!(model.inner_model, constraint_function, lim.upper)
+    index = RAM.addconstraint!(model.inner_model, constraint_function, lim.upper)
     constraint_index = MOI.ConstraintIndex{MOI.ScalarAffineFunction{Float64}, 
                                            MOI.LessThan{Float64}}(index) 
     push!(model.constraint_count["LessThan"], constraint_index)
