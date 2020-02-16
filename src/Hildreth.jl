@@ -3,8 +3,14 @@ import Base.==
 export Hildreth
 
 struct Hildreth <: RowActionMethod end
+#
+#TODO rename? I was tired
+mutable struct ConstraintEntry{T}
+    func::Vector{T}
+    lim::T
+end
 
-#TODO Implement vectorisation
+#TODO Implement vectorisation, if it is even necessary?
 """
     HildrethModel(E, F, M, γ, H K, ucSoln, Soln, E_fact, workingvars, options)
 
@@ -44,19 +50,13 @@ mutable struct HildrethModel <: ModelFormulation
         model.workingvars = Dict("iterations" => 0)
         model.termination_condition = RAM_OPTIMIZE_NOT_CALLED
 
-        model.constraints = OrderedDict{Int,ConstraintEntry{Float}}()
+        model.constraints = OrderedDict{Int,ConstraintEntry{Float64}}()
 
         model.variable_count = 0
         model.constraint_count = 0
         model.max_constraint_index = 0
         return model
     end
-end
-
-#TODO rename? I was tired
-mutable struct ConstraintEntry{T}
-    func::Vector{T}
-    lim::T
 end
 
 function get_termination_status(model::HildrethModel)::internal_termination_conditions
@@ -346,7 +346,7 @@ end
 
 function edit_constraint_coefficient!(model::HildrethModel, con_index::Int, var_index::Int, val::Float64)
     !haskey(model.constraints, con_index) && error("Invalid constraint identifier")
-    1 <= var_index <= model.variable_count  && error("Invalid variable identifier")
+    !(1 <= var_index <= model.variable_count)  && error("Invalid variable identifier")
     model.constraints[con_index].func[var_index] = val
 end
 

@@ -90,11 +90,12 @@ function MOI.delete(model::Optimizer, index::MOI.VariableIndex)
 end
 
 #= Constraints =#
+#TODO: Add ability to add non lessthan constraints, probably needs indicator 
+#function in solvers?
 function MOI.add_constraint(model::Optimizer, 
                             func::MOI.ScalarAffineFunction{T}, 
                             lim::MOI.LessThan{T})::MOI.ConstraintIndex where T
     #TODO: Raise error on non-zero valued constant in func
-    #TODO: Add ability to add non lessthan constraints
     constraint_function = zeros(model.variable_count)
     for t in func.terms
         constraint_function[t.variable_index.value] = t.coefficient
