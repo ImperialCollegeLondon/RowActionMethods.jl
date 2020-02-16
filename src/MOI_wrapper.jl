@@ -142,7 +142,11 @@ function MOI.modify(model::Optimizer,
                                   con_index.value, 
                                   change.new_constant)
 end
-                    
+
+#Currently not supporting in-place modification, rebuilds the model each time
+function MOI.set(model::Optimizer, ::MOI.ConstraintSet, c::MOI.ConstraintIndex{F,MOI.LessThan}, set::MOI.LessThan) where {F, S}
+    MOI.modify(model, c, MOI.ScalarConstantChange(c.upper))    
+end
 
 #= MOI.set functions =#
 function MOI.set(model::Optimizer, 
@@ -173,9 +177,6 @@ function MOI.set(model::Optimizer, ::MOI.ObjectiveSense, val::MOI.OptimizationSe
     model.sense = val
 end
 
-function MOI.set(model::Optimizer, ::MOI.ConstraintSet, c::MOI.ConstraintIndex{F,S}, set::S) where {F, S}
-    
-end
 
 #= MOI.get functions =#
 function MOI.get(model::Optimizer, ::MOI.SolverName)::String

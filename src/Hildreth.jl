@@ -195,7 +195,7 @@ end
 
 #TODO: Add type parameterisation
 function get_constraintvector(model::HildrethModel)::Vector{Float64}
-    return [j.val for j in values(model.constraints)]
+    return [j.lim for j in values(model.constraints)]
 end
 
 """
