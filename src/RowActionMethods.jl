@@ -14,9 +14,13 @@ using LinearAlgebra
 
 export iterate_model!, GetModel, buildmodel!, answer, get_SC
 
+const RAM = RowActionMethods
+export RAM
+
 include("./Types.jl")
 include("./StopConditions.jl")
 include("./MOI_wrapper.jl")
+include("./Benchmarks.jl")
 
 #Method includes 
 include("./Hildreth.jl")
@@ -26,6 +30,11 @@ include("./ExtendedHildreth.jl")
 method_mapping= Dict("Hildreth" => Hildreth(),
                      "ExtendedHildreth" => ExtendedHildreth(),
                     )
+
+function GetModel(model::String)::ModelFormulation
+    !haskey(method_mapping, model) && error("Invalid Solver")
+    GetModel(method_mapping[model])
+end
 
 """
     get_SC(constraints...)
@@ -74,6 +83,10 @@ function iterate_model!(model::ModelFormulation,
 
     #Calculate solution
     resolver!(model)
+end
+
+function run_benchmarks()
+    run_all_benchmarks()
 end
 
 end # module

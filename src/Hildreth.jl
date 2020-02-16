@@ -1,9 +1,16 @@
+using DataStructures
 import Base.==
 export Hildreth
 
 struct Hildreth <: RowActionMethod end
+#
+#TODO rename? I was tired
+mutable struct ConstraintEntry{T}
+    func::Vector{T}
+    lim::T
+end
 
-#TODO Implement vectorisation
+#TODO Implement vectorisation, if it is even necessary?
 """
     HildrethModel(E, F, M, γ, H K, ucSoln, Soln, E_fact, workingvars, options)
 
@@ -17,18 +24,39 @@ E_fact - factorised representation of E\n
 workingvars - a Dict of values adjusted between iterations\n
 options - [currently unused] specific values used for setting solver-specific values
 """
+#TODO change to parametric type
 mutable struct HildrethModel <: ModelFormulation
+    variable_count::Int
+    #QP matrix
     E::Array{Float64}
+    #QP vector
     F::Vector{Float64}
-    M::Array{Float64}
-    γ::Vector{Float64}
+    #Maps constraint index var to constraint matrix/value
+    constraints::OrderedDict{Int,ConstraintEntry{Float64}}
+    #Tracks largest constraint to ensure a unique new index
+    max_constraint_index::Int
+    #Track number of constraints
+    constraint_count::Int 
     H::Array{Float64}
     K::Vector{Float64}
     ucSoln::Vector{Float64}
-    Soln::Union{Vector{Float64},Nothing}
-    E_fact::Union{Bidiagonal,Factorization,Array,Diagonal,Nothing}
-    workingvars::Dict{String, Any}
+    Soln::Vector{Float64}
+    E_fact::Union{Bidiagonal,Factorization,Array,Diagonal}
+    workingvars::Dict{String,Any}
     termination_condition::internal_termination_conditions
+
+    function HildrethModel()
+        model = new()
+        model.workingvars = Dict("iterations" => 0)
+        model.termination_condition = RAM_OPTIMIZE_NOT_CALLED
+
+        model.constraints = OrderedDict{Int,ConstraintEntry{Float64}}()
+
+        model.variable_count = 0
+        model.constraint_count = 0
+        model.max_constraint_index = 0
+        return model
+    end
 end
 
 function get_termination_status(model::HildrethModel)::internal_termination_conditions
@@ -46,10 +74,7 @@ Returns a seleton model of the problem for solving with Hildreth's orignal
 method.
 """
 function GetModel(::Hildreth)::HildrethModel
-    return HildrethModel([],[],[],[],[],[],[],
-                         Nothing(),Nothing(), 
-                         Dict("iterations"=>0),
-                         RAM_OPTIMIZE_NOT_CALLED)
+    return HildrethModel()
 end
 
 """
@@ -88,30 +113,89 @@ intended for sparse matrices, this should probably be the type used. In addition
 we have a requirement for positive definite matrices, this is assumed in insertion
 and should be checked. 
 """
-function setobjective!(model::HildrethModel, E::Array{T, 2}, F::Vector{T}) where T
+function setobjective!(model::HildrethModel, E::Array{T, 2}, F::Vector{T}, num_vars::Int) where T
     model.E = E
     model.F = F
+    model.variable_count = num_vars
+end
+
+function delete_variable!(model::HildrethModel)
+    model.variable_count -= 1
 end
 
 """
     setconstriant!(model::HildrethModel, M_row::Vector{T}, lim::T) where T
 
-Adds a less-than constraint to the model. For the constraint Mx ≦ γ this adds 
-one row to the M matrix, and a new entry to the γ vector.o
+Adds a less-than constraint to the model.
 
 Returns a UID value that the solver can use to map to the value if modifying,
-viewing, or deleting the values. In this case the UID refers to a row of the constraint/limit matrices.
-
-TODO: Change indexing to be independent of the number of existing entries
+viewing, or deleting the values. UID is based off the number of constraints
+that have ever been added, not the current number.
 """
-function setconstraint!(model::HildrethModel, M_row::Vector{T}, lim::T)::Int where T
-    if isempty(model.M)
-        model.M = M_row'
-    else
-        model.M = [model.M; M_row']
+function addconstraint!(model::HildrethModel, M_row::Vector{T}, lim::T)::Int where T
+    !validconstraint(model, M_row, lim) && error("Invalid constraint, have you added an objective?")
+    
+    #Ensures unique constraint index
+    new_index = model.max_constraint_index + 1
+
+    push!(model.constraints, new_index => ConstraintEntry(M_row, lim))
+
+    #Update largest index
+    model.max_constraint_index = new_index
+    model.constraint_count += 1
+    return new_index
+end
+
+"""
+    validconstraint(model::HildrethModel, row::Vector{T}, lim::T)::Bool where T
+
+Return a bool to indicate if a constraint is currently valid for the model.
+
+Checks if the number of entries is equal to the number of registered variables.
+"""
+function validconstraint(model::HildrethModel, row::Vector{T}, lim::T)::Bool where T
+    return size(row)[1] == model.variable_count
+end
+
+"""
+    extendcontraints(model::HildrethModel)
+    
+Append a new value to the end of each constraint in model. Assumes that a new
+variable being added is added at the end.
+"""
+function extendcontraints(model::HildrethModel)
+    #TODO add type parameters for appending
+    for con in values(model.constraints)
+        append!(con.func, 0.0)
     end
-    append!(model.γ, lim)
-    return size(model.γ)[1]
+end
+
+"""
+    shrinkconstraints(model::HildrethModel, index::Int)
+    
+Removes the entry in each constraint at index.
+"""
+function shrinkconstraints(model::HildrethModel, index::Int)
+    for con in model.constraints
+        deleteat!(con.func, index)
+    end
+end
+
+"""
+    get_constraintmatrix(model::HildrethModel)::Matrix(Float64,2)
+
+Forms the stored constraints into a transposed matrix form,
+ie the value Mᵀ is returned.
+"""
+#TODO: Add type parameterisation
+function get_constraintmatrix(model::HildrethModel)::Array{Float64,2}
+    a = hcat([j.func for j in values(model.constraints)]...)
+    return a
+end
+
+#TODO: Add type parameterisation
+function get_constraintvector(model::HildrethModel)::Vector{Float64}
+    return [j.lim for j in values(model.constraints)]
 end
 
 """
@@ -120,13 +204,16 @@ end
 Builds the internal variables based on problem specification
 """
 function buildmodel!(model::HildrethModel)
-    #model.E_fact = factorize(model.E)
+    Mt = get_constraintmatrix(model)
+    M = Mt'
+    γ = get_constraintvector(model)
+
     model.E_fact = cholesky(model.E)
-    model.H = model.M * (model.E_fact\transpose(model.M))
-    model.K = model.γ + (model.M * (model.E_fact\model.F))
+    model.H = M * (model.E_fact\Mt)
+    model.K = γ + (M * (model.E_fact\model.F))
     model.ucSoln = -(model.E_fact\model.F)
-    model.workingvars["λ"] = zeros(size(model.γ))
-    model.workingvars["λ_old"] = zeros(size(model.γ))
+    model.workingvars["λ"] = zeros(model.constraint_count)
+    model.workingvars["λ_old"] = zeros(model.constraint_count)
 end
 
 """
@@ -135,6 +222,7 @@ end
 Checks equality of two hildreth model structs. Does not check for object
 equality, only value equality.
 """
+#FIXME Update to  new model
 function ==(a::HildrethModel, b::HildrethModel)::Bool
     return a.E == b.E &&
            a.F == b.F &&
@@ -172,10 +260,22 @@ function set_unconstrained!(model::HildrethModel)
 end
 
 function is_empty(model::HildrethModel)
-    return model.E == [] &&
-           model.F == [] &&
-           model.M == [] &&
-           model.γ == []
+    #Best solution I could find quickly, probably better ways of doing it.
+    E() = try
+              return model.E
+          catch UndefRefError
+              return []
+          end
+    F() = try
+              return model.F
+          catch UndefRefError
+              return []
+          end
+
+    return E() == [] && F() == [] &&
+           model.constraints == OrderedDict() &&
+           model.variable_count == 0 &&
+           model.constraint_count == 0 
 end
 
 """
@@ -223,9 +323,9 @@ a working variable of the row action method.
 function resolver!(model::HildrethModel)
     Ef = model.E_fact
     F = model.F
-    M = model.M
+    Mt = get_constraintmatrix(model)
     λ = model.workingvars["λ"]
-    model.Soln = -(Ef\(F + M' * λ))
+    model.Soln = -(Ef\(F + Mt * λ))
 end
 
 function answer(model::HildrethModel)
@@ -236,5 +336,21 @@ function answer(model::HildrethModel)
     end
 end
 
+#TODO Add `reformulate` option to the model to indicate that the dual no longer represents the
+#constraints
+function delete_constraint!(model::HildrethModel, con_index::Int)
+    !haskey(model.constraints, con_index) && error("Invalid constraint identifier")
+    delete!(model.constraints, con_index)
+    model.constraint_count -= 1
+end
 
+function edit_constraint_coefficient!(model::HildrethModel, con_index::Int, var_index::Int, val::Float64)
+    !haskey(model.constraints, con_index) && error("Invalid constraint identifier")
+    !(1 <= var_index <= model.variable_count)  && error("Invalid variable identifier")
+    model.constraints[con_index].func[var_index] = val
+end
 
+function edit_constraint_constant!(model::HildrethModel, con_index::Int, val::Float64)
+    !haskey(model.constraints, con_index) && error("Invalid constraint identifier")
+    model.constraints[con_index].lim = val
+end

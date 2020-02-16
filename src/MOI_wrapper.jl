@@ -14,7 +14,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     name::String
 
     variable_count::Int
-    constraint_count::DefaultDict{String,Vector{MOI.ConstraintIndex}}
+    constraints::Vector{MOI.ConstraintIndex}
 
     silent::Bool #True means nothing should be printed
 
@@ -30,7 +30,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
         model.method = RAM.method_mapping[method]
         model.silent = false
         model.variable_count = 0
-        model.constraint_count = DefaultDict{String,Vector{MOI.ConstraintIndex}}([])
+        model.constraints = Vector{MOI.ConstraintIndex}()
                                   
 
         for (key, val) in kwargs
@@ -67,7 +67,7 @@ end
 function MOI.empty!(model)
     model.inner_model = GetModel(model.method)
     model.variable_count = 0
-    #model.constraint_count = DefaultDict{String,Vector{MOI.ConstraintIndex}}([])
+    model.constraints = []
 end
 
 #= Variables =#
@@ -80,7 +80,8 @@ function MOI.add_variables(model::Optimizer, n::Int)::Vector{MOI.VariableIndex}
     return [MOI.add_variable(model) for i in 1:n]
 end
 
-#= Constrained Variables =#
+MOI.supports_add_constrained_variables(::Optimizer, ::Union{MOI.GreaterThan, MOI.LessThan}) = true
+
 function MOI.add_constrained_variables(model::Optimizer, sets::MOI.LessThan)
     for (i, set) in enumerate(sets)
 		variables[i] = MOI.add_variable(model)
@@ -91,9 +92,19 @@ function MOI.add_constrained_variables(model::Optimizer, sets::MOI.LessThan)
     return variables, constraints
 end
 
-MOI.supports_add_constrained_variables(::Optimizer, ::Union{MOI.GreaterThan, MOI.LessThan}) = true
+
+function MOI.delete(model::Optimizer, index::MOI.VariableIndex)
+    #TODO add support for deletion when constraints exist
+    #TODO understand what affect this has on objective
+    if length(model.constraints) > 0
+        error("Cannot delete variables when constraints exist.")
+    end
+    RAM.delete_variable!(model.inner_model)
+end
 
 #= Constraints =#
+#TODO: Add ability to add non lessthan constraints, probably needs indicator 
+#function in solvers?
 function MOI.add_constraint(model::Optimizer, 
                             func::MOI.ScalarAffineFunction{T}, 
                             lim::MOI.LessThan{T})::MOI.ConstraintIndex where T
@@ -103,10 +114,10 @@ function MOI.add_constraint(model::Optimizer,
         constraint_function[t.variable_index.value] = t.coefficient
     end
 
-    index = RAM.setconstraint!(model.inner_model, constraint_function, lim.upper)
+    index = RAM.addconstraint!(model.inner_model, constraint_function, lim.upper)
     constraint_index = MOI.ConstraintIndex{MOI.ScalarAffineFunction{Float64}, 
                                            MOI.LessThan{Float64}}(index) 
-    push!(model.constraint_count["LessThan"], constraint_index)
+    push!(model.constraints, constraint_index)
     return constraint_index
 end
 
@@ -122,14 +133,42 @@ function MOI.supports_constraint(model::Optimizer,
     return true
 end
 
+function MOI.delete(model::Optimizer, index::MOI.ConstraintIndex{F,S}) where {F,S}
+    RAM.delete_constraint!(model.inner_model, index.value)
+    #TODO alternative way to remove entry efficiently?
+    setdiff!(model.constraints, [index])
+end
+
+function MOI.modify(model::Optimizer, 
+                    con_index::MOI.ConstraintIndex{F,S},
+                    change::MOI.ScalarCoefficientChange{Float64}) where {F,S}
+    RAM.edit_constraint_coefficient!(model.inner_model, 
+                                     con_index.value, 
+                                     change.variable.value, 
+                                     change.new_coefficient)
+end
+
+function MOI.modify(model::Optimizer,
+                    con_index::MOI.ConstraintIndex{F,S},
+                    change::MOI.ScalarConstantChange{Float64}) where {F,S}
+    RAM.edit_constraint_constant!(model.inner_model,
+                                  con_index.value, 
+                                  change.new_constant)
+end
+
+#Currently not supporting in-place modification, rebuilds the model each time
+function MOI.set(model::Optimizer, ::MOI.ConstraintSet, c::MOI.ConstraintIndex{F,MOI.LessThan}, set::MOI.LessThan) where {F, S}
+    MOI.modify(model, c, MOI.ScalarConstantChange(c.upper))    
+end
 
 #= MOI.set functions =#
 function MOI.set(model::Optimizer, 
                  ::MOI.ObjectiveFunction{F}, 
                  val::F) where {F <: MOI.ScalarQuadraticFunction{Float64}} 
 
-    Q = zeros(model.variable_count, model.variable_count)
-    a = zeros(model.variable_count)
+    num_vars = model.variable_count
+    Q = zeros(num_vars, num_vars)
+    a = zeros(num_vars)
     
     for t in val.quadratic_terms
         Q[t.variable_index_1.value, t.variable_index_2.value] = t.coefficient
@@ -140,7 +179,7 @@ function MOI.set(model::Optimizer,
         a[t.variable_index.value] = t.coefficient
     end
 
-    setobjective!(model.inner_model, Q, a)
+    setobjective!(model.inner_model, Q, a, num_vars)
 end
 
 function MOI.set(model::Optimizer, ::MOI.Silent, val::Bool)
@@ -150,6 +189,7 @@ end
 function MOI.set(model::Optimizer, ::MOI.ObjectiveSense, val::MOI.OptimizationSense)
     model.sense = val
 end
+
 
 #= MOI.get functions =#
 function MOI.get(model::Optimizer, ::MOI.SolverName)::String
@@ -163,7 +203,8 @@ end
 function MOI.get(model::Optimizer, 
                  ::MOI.NumberOfConstraints{MOI.ScalarAffineFunction{T},
                                            MOI.LessThan{T}})::Int where T
-    return model.constraint_count["LessThan"]
+    #FIXME update with type access not dict access
+    return model.constraint["LessThan"]
 end
 
 #Maps internal RAM termination conditions to MOI equivalents
@@ -180,12 +221,12 @@ function MOI.get(model::Optimizer, ::MOI.TerminationStatus)
 end
 
 #function MOI.get(model::Optimizer, ::MOI.ObjectiveValue)
-#    sense = (model.sense == MOI.MAX_SENSE) ? -1 : 1
+#    sense = model.sense == MOI.MAX_SENSE ? -1 : 1
 #    return sense * RAM.answer(model.inner_model)
 #end
 
 function MOI.get(model::Optimizer, var::MOI.VariablePrimal, vi::MOI.VariableIndex)
-    sense = (model.sense == MOI.MAX_SENSE) ? -1 : 1
+    sense = model.sense == MOI.MAX_SENSE ? -1 : 1
     return sense * RAM.answer(model.inner_model)[vi.value]
 end
 
@@ -195,5 +236,4 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike; kws...)
 end
 
 MOIU.supports_default_copy_to(model::Optimizer, copy_names::Bool) = true
-
 
