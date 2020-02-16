@@ -225,7 +225,7 @@ end
 #    return sense * RAM.answer(model.inner_model)
 #end
 
-function MOI.get(model::Optimizer, var::MOI.VariablePrimal, vi::MOI.VariableIndex)
+function MOI.get(model::Optimizer, ::MOI.VariablePrimal, vi::MOI.VariableIndex)
     sense = model.sense == MOI.MAX_SENSE ? -1 : 1
     return sense * RAM.answer(model.inner_model)[vi.value]
 end
