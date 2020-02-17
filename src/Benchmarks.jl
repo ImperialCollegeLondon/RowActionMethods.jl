@@ -67,8 +67,6 @@ function moi_generate_test(model::Optimizer, n::Int, m::Int
                           )::Tuple{Vector{MOI.VariableIndex},Vector{MOI.ConstraintIndex}}
     #TODO make more generic to other solvers
     #TODO give specific value ranges (currently mostl limited to [0,1])
-    #Objective generation 
-    model = Optimizer("Hildreth")
     
     x = MOI.add_variables(model, n)
     obj_quad_term = MOI.ScalarQuadraticTerm{Float64}[]
