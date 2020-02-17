@@ -328,11 +328,19 @@ function resolver!(model::HildrethModel)
     model.Soln = -(Ef\(F + Mt * λ))
 end
 
-function answer(model::HildrethModel)
+function variable_values(model::HildrethModel)
     if model.Soln == nothing 
         throw(ErrorException("Attempt to access answer value before any iterations have completed."))
     else
         return model.Soln
+    end
+end
+
+function objective_value(model::HildrethModel)
+    if model.Soln == nothing 
+        throw(ErrorException("Attempt to access answer value before any iterations have completed."))
+    else
+        return 0.5 * (model.Soln' * model.E * model.Soln) + (model.Soln' * model.F)
     end
 end
 

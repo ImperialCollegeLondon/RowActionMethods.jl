@@ -96,7 +96,7 @@ function MOI.add_variables(model::Optimizer, n::Int)::Vector{MOI.VariableIndex}
     return [MOI.add_variable(model) for i in 1:n]
 end
 
-MOI.supports_add_constrained_variables(::Optimizer, ::Union{MOI.GreaterThan, MOI.LessThan}) = true
+#MOI.supports_add_constrained_variables(::Optimizer, ::MOI.LessThan) = true
 
 function MOI.add_constrained_variables(model::Optimizer, sets::MOI.LessThan)
     for (i, set) in enumerate(sets)
@@ -236,14 +236,14 @@ function MOI.get(model::Optimizer, ::MOI.TerminationStatus)
     return RAM_MOI_Termination_Map[RAM.get_termination_status(model.inner_model)]
 end
 
-#function MOI.get(model::Optimizer, ::MOI.ObjectiveValue)
-#    sense = model.sense == MOI.MAX_SENSE ? -1 : 1
-#    return sense * RAM.answer(model.inner_model)
-#end
+function MOI.get(model::Optimizer, ::MOI.ObjectiveValue)
+    sense = model.sense == MOI.MAX_SENSE ? -1 : 1
+    return sense * RAM.objective_value(model.inner_model)
+end
 
 function MOI.get(model::Optimizer, ::MOI.VariablePrimal, vi::MOI.VariableIndex)
     sense = model.sense == MOI.MAX_SENSE ? -1 : 1
-    return sense * RAM.answer(model.inner_model)[vi.value]
+    return sense * RAM.variable_values(model.inner_model)[vi.value]
 end
 
 #= MOI Copy Functions =#
