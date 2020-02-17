@@ -13,11 +13,11 @@ end
 A stop condition that halts after 'num' iterations.
 """
 struct SC_Iterations <: StoppingCondition
-    value ::Int64
+    value::Int64
 end
 
 struct MultipleStopCondition <: StoppingCondition
-    conditions ::Vector{StoppingCondition}
+    conditions::Vector{StoppingCondition}
 end
 
 """

@@ -16,6 +16,8 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     variable_count::Int
     constraints::Vector{MOI.ConstraintIndex}
 
+    stopping_conditions::Union{RAM.StoppingCondition, Bool}
+
     silent::Bool #True means nothing should be printed
 
     function Optimizer(method::String;kwargs...)
@@ -32,6 +34,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
         model.variable_count = 0
         model.constraints = Vector{MOI.ConstraintIndex}()
                                   
+        model.stopping_conditions = false
 
         for (key, val) in kwargs
             MOI.set(model, MOI.RawParameter(String(key)), val)
@@ -46,7 +49,22 @@ end
 #= Model Actions =#
 function MOI.optimize!(model::Optimizer)
     RAM.buildmodel!(model.inner_model)
-    RAM.iterate_model!(model.inner_model)
+    if model.stopping_conditions == false
+        RAM.iterate_model!(model.inner_model)
+    else
+        RAM.iterate_model!(model.inner_model, model.stopping_conditions)
+    end
+end
+
+#= Custom Options =#
+function MOI.set(model::Optimizer, option::MOI.RawParameter, val) 
+    if option.name == "iterations"
+        model.stopping_conditions = RAM.SC_Iterations(val)
+    elseif option.name == "conditions"
+        model.stopping_conditions = val
+    else
+        error("Unsupported option $(option.name).")
+    end
 end
 
 #= Model Status =#
@@ -55,8 +73,6 @@ function MOI.supports(::Optimizer,
     return true
 end
 
-#Note that this is a temporary measure, there is no reason to not support max but
-#at the time of writing it requires refactoring code that will break even more tests
 MOI.supports(::Optimizer, ::MOI.ObjectiveSense) = true
 
 function MOI.is_empty(model::Optimizer)::Bool
