@@ -1,6 +1,6 @@
 using DataStructures
 import Base.==
-export Hildreth
+export Hildreth, SC_HildrethConvergence
 
 struct Hildreth <: RowActionMethod end
 #
