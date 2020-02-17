@@ -63,10 +63,8 @@ function generate_random_vector(n::Int, ::Type{T}; entry_gen=rand, non_zero_gen:
 end
 
 
-function moi_generate_test(n::Int, m::Int
-                          )::Tuple{
-                           RAM.Optimizer,Vector{MOI.VariableIndex},Vector{MOI.ConstraintIndex}
-                          }
+function moi_generate_test(model::Optimizer, n::Int, m::Int
+                          )::Tuple{Vector{MOI.VariableIndex},Vector{MOI.ConstraintIndex}}
     #TODO make more generic to other solvers
     #TODO give specific value ranges (currently mostl limited to [0,1])
     #Objective generation 
@@ -101,5 +99,6 @@ function moi_generate_test(n::Int, m::Int
         push!(con, MOI.add_constraint(model, func, lim))
     end
 
-    return model, x, con
+    return x, con
 end
+
