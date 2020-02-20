@@ -21,6 +21,7 @@ include("./Types.jl")
 include("./StopConditions.jl")
 include("./MOI_wrapper.jl")
 include("./Benchmarks.jl")
+include("./Constraints_Variables.jl")
 
 #Method includes 
 include("./Hildreth.jl")
