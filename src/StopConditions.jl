@@ -84,8 +84,15 @@ function check_stopcondition!(model::ModelFormulation,
 	return stop
 end
 
-@enum(internal_termination_conditions,
+@enum(ram_termination_condition,
 RAM_OPTIMIZE_NOT_CALLED,
 RAM_OPTIMAL, RAM_INFEASIBLE,
 RAM_ITERATION_LIMIT, RAM_TIME_LIMIT)
 
+function get_termination_status(model::ModelFormulation)::ram_termination_condition
+    return model.status.termination_condition
+end
+
+function set_termination_status!(model::ModelFormulation, status::ram_termination_condition)
+    return model.status.termination_condition = status
+end
