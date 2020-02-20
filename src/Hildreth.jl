@@ -4,13 +4,12 @@ export Hildreth, SC_HildrethConvergence
 
 struct Hildreth <: RowActionMethod end
 #
-#TODO rename? I was tired
+#TODO Make this available to all solvers, including functions operating on it
 mutable struct ConstraintEntry{T}
     func::Vector{T}
     lim::T
 end
 
-#TODO Implement vectorisation, if it is even necessary?
 """
     HildrethModel(E, F, M, γ, H K, ucSoln, Soln, E_fact, workingvars, options)
 
@@ -102,16 +101,10 @@ function iterate!(model::HildrethModel)
 end
 
 """
-    setobjective!(model::HildrethModel, E::Array{T, 2}, F::Vector{T}) where T
+    setobjective!(model::HildrethModel, E::Array{T, 2}, F::Vector{T}, num_vars::Int) where T
 
 Sets the objective function for the problem. Hildreth's algorithm requires that 
-E is positive definite, and the dimensions of both to match the number of variables
-defined in the problem (if using the MOI/JuMP interface this should be enforced).
-
-Currently store all matrices in a standard format. As row action matrices are
-intended for sparse matrices, this should probably be the type used. In addition,
-we have a requirement for positive definite matrices, this is assumed in insertion
-and should be checked. 
+E is positive definite. The number of problem variables is also needed.
 """
 function setobjective!(model::HildrethModel, E::Array{T, 2}, F::Vector{T}, num_vars::Int) where T
     model.E = E
@@ -119,8 +112,27 @@ function setobjective!(model::HildrethModel, E::Array{T, 2}, F::Vector{T}, num_v
     model.variable_count = num_vars
 end
 
-function delete_variable!(model::HildrethModel)
+"""
+    delete_variable!(model::HildrethModel, index::Int)
+
+Performs actions to remove constraint entries and modify objective
+function to remove all references to a variable index, while maintaining
+a consistent internal state. 
+
+Note that the act of removing a variable from the objective function is
+currently expensive when using a very large number of variables. This shouldn't
+be an issue unless changing variables at a very regular interval.
+TODO: This will likely improve when moving to sparse matrices.
+"""
+function delete_variable!(model::HildrethModel, index::Int)
     model.variable_count -= 1
+    shrinkconstraints(model, index)
+    shrinkobjective(model, index)
+end
+
+function shrinkobjective(model::HildrethModel, index::Int)
+    model.E = model.E[setdiff(1:end, index), setdiff(1:end, index)]
+    deleteat!(model.F, index)
 end
 
 """
@@ -173,12 +185,35 @@ end
 """
     shrinkconstraints(model::HildrethModel, index::Int)
     
-Removes the entry in each constraint at index.
+Removes the entry in each constraint at index. Also removes any constraints with
+no non-zero coefficients. 
+
+Should not be called directly, as this will result in an inconsistent internal
+state.
 """
 function shrinkconstraints(model::HildrethModel, index::Int)
     for con in model.constraints
         deleteat!(con.func, index)
     end
+    filter!(c -> !check_emptyconstraint(c.second), model.constraints)
+end
+
+"""
+    check_emptyconstraint(con::ConstraintEntry)::Bool
+
+Returns true if `con` is empty (ie, no variables are left), or if all variable
+coefficients are 0.
+"""
+function check_emptyconstraint(con::ConstraintEntry)::Bool
+    Length(con.func) == 0 && return true
+
+    for e in con.func
+        if e != 0 
+            return false
+        end
+    end
+
+    return true
 end
 
 """
