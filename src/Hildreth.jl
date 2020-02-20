@@ -165,6 +165,8 @@ function is_empty(model::HildrethModel)
               return []
           end
 
+    @debug "Empty model test results:" E = E() F = F() status = empty_model_status(model)
+
     return E() == [] && F() == [] && empty_model_status(model)
 end
 

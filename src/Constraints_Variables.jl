@@ -60,7 +60,7 @@ Return a bool to indicate if a constraint is currently valid for the model.
 Checks if the number of entries is equal to the number of registered variables.
 """
 function validconstraint(model::ModelFormulation, row::Vector{T}, lim::T)::Bool where T
-    return size(row)[1] == model.Status.variable_count
+    return size(row)[1] == model.status.variable_count
 end
 
 """
@@ -164,6 +164,15 @@ function edit_constraint_constant!(model::ModelFormulation, con_index::Int, val:
     model.status.constraints[con_index].lim = val
 end
 
+#TODO parametric type
 function empty_model_status(model::ModelFormulation)
-    return model.status == RAM_Components()
+    s = model.status
+    println(s)
+    empty = s.constraints == OrderedDict{Int,ConstraintEntry{Float64}}() &&
+            s.variable_count == 0 &&
+            s.max_constraint_index == 0 &&
+            s.constraint_count == 0 &&
+            s.termination_condition == RAM_OPTIMIZE_NOT_CALLED &&
+            s.iterations == 0
+   return empty
 end

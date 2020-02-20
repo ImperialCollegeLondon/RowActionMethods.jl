@@ -11,6 +11,7 @@ Subject to the constraints: Mx <= γ
 =#
 
 using LinearAlgebra
+using Logging
 
 export iterate_model!, GetModel, buildmodel!, answer, get_SC
 

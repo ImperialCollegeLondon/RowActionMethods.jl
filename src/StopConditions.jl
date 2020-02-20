@@ -59,7 +59,7 @@ Checks if the number of iterations has exceeded a maximum.
 function stopcondition(model::ModelFormulation, 
                        iterations_limit::SC_Iterations
                       )#::Tuple(Bool,internal_termination_conditions)
-    return get_iterations(model) >= iterations_limit.value, RAM_ITERATION_LIMIT
+    return model.status.iterations >= iterations_limit.value, RAM_ITERATION_LIMIT
 end
 
 
