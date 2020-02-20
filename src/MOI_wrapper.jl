@@ -96,10 +96,7 @@ end
 function MOI.delete(model::Optimizer, index::MOI.VariableIndex)
     #TODO add support for deletion when constraints exist
     #TODO understand what affect this has on objective
-    if length(model.constraints) > 0
-        error("Cannot delete variables when constraints exist.")
-    end
-    RAM.delete_variable!(model.inner_model)
+    RAM.delete_variable!(model.inner_model, index.value)
 end
 
 #= Constraints =#
