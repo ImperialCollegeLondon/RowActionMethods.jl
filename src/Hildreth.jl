@@ -70,8 +70,6 @@ function iterate!(model::HildrethModel)
         w /= -H[i,i]
         λ[i] = max(0, w)
     end
-
-    model.status.iterations += 1
 end
 
 """

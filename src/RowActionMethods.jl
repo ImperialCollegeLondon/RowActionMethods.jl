@@ -81,6 +81,7 @@ function iterate_model!(model::ModelFormulation,
     #Run iterations until stop conditions are met
     while !check_stopcondition!(model, conditions) 
         iterate!(model)
+        model.status.iterations += 1
     end
 
     #Calculate solution
