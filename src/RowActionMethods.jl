@@ -32,8 +32,8 @@ include("./Hildreth.jl")
 include("./ExtendedHildreth.jl")
 
 #Maps strings to method types
-method_mapping= Dict("Hildreth" => Hildreth(),
-                     "ExtendedHildreth" => ExtendedHildreth(),
+method_mapping= Dict("Hildreth" => Hildreth,
+                     "ExtendedHildreth" => ExtendedHildreth,
                     )
 function run_benchmarks()
     run_all_benchmarks()

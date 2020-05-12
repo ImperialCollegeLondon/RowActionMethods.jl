@@ -1,10 +1,8 @@
 import Base.==
 export Hildreth, SC_HildrethConvergence
 
-struct Hildreth <: RowActionMethod end
-
 """
-    HildrethModel(E, F, M, γ, H K, ucSoln, Soln, E_fact, workingvars, options)
+    Hildreth(E, F, M, γ, H K, ucSoln, Soln, E_fact, workingvars, options)
 
 A model for solving the problem with Hildreth's original method.
 For the problem: 
@@ -17,48 +15,46 @@ workingvars - a Dict of values adjusted between iterations\n
 options - [currently unused] specific values used for setting solver-specific values
 """
 #TODO change to parametric type
-mutable struct HildrethModel <: ModelFormulation
+mutable struct Hildreth{T} <: ModelFormulation
     #QP matrix
-    E::Array{Float64}
+    E::Array{T}
     #QP vector
-    F::Vector{Float64}
-    H::Array{Float64}
-    K::Vector{Float64}
-    ucSoln::Vector{Float64}
-    Soln::Vector{Float64}
+    F::Vector{T}
+    H::Array{T}
+    K::Vector{T}
+    ucSoln::Vector{T}
+    Soln::Vector{T}
     E_fact::Union{Bidiagonal,Factorization,Array,Diagonal}
     #TODO types
     λ
     λ_old
-    status::RAM_Components{Float64}
 
-    function HildrethModel()
+    function Hildreth{T}() where T
         model = new()
-        model.status = RAM_Components{Float64}()
         return model
     end
 end
 
 
 """
-    GetModel(::Hildreth)::HildrethModel
+    GetModel(::Hildreth)::Hildreth
     
 Returns a seleton model of the problem for solving with Hildreth's orignal
 method.
 """
-function GetModel(::Hildreth)::HildrethModel
-    return HildrethModel()
+function GetModel(::Hildreth)::Hildreth
+    return Hildreth()
 end
 
 """
-    iterate!(model::HildrethModel)
+    iterate!(model::Hildreth)
 
 Performs one iteration of the algorithm. Updates λ as it progresses.
 
 Treats the entire summation as a calculation of H_i * λ, then subtracts the 
 contribution of the currently considered λ. 
 """
-function iterate!(model::HildrethModel)
+function iterate!(model::Hildreth)
     λ = model.λ
     model.λ_old = copy(λ)
     H = model.H
@@ -73,29 +69,29 @@ function iterate!(model::HildrethModel)
 end
 
 """
-    setobjective!(model::HildrethModel, E::Array{T, 2}, F::Vector{T}, num_vars::Int) where T
+    setobjective!(model::Hildreth, E::Array{T, 2}, F::Vector{T}, num_vars::Int) where T
 
 Sets the objective function for the problem. Hildreth's algorithm requires that 
 E is positive definite. The number of problem variables is also needed.
 """
-function setobjective!(model::HildrethModel, E::Array{T, 2}, F::Vector{T}, num_vars::Int) where T
+function setobjective!(model::Hildreth, E::Array{T, 2}, F::Vector{T}, num_vars::Int) where T
     model.E = E
     model.F = F
     model.status.variable_count = num_vars
 end
 
 
-function shrinkobjective(model::HildrethModel, index::Int)
+function shrinkobjective(model::Hildreth, index::Int)
     model.E = model.E[setdiff(1:end, index), setdiff(1:end, index)]
     deleteat!(model.F, index)
 end
 
 """
-    buildmodel(model::HildrethModel)
+    buildmodel(model::Hildreth)
 
 Builds the internal variables based on problem specification
 """
-function buildmodel!(model::HildrethModel)
+function buildmodel!(model::Hildreth)
     Mt = get_constraintmatrix(model)
     M = Mt'
     γ = get_constraintvector(model)
@@ -109,13 +105,13 @@ function buildmodel!(model::HildrethModel)
 end
 
 """
-    ==(a::HildrethModel, b::HildrethModel)::Bool
+    ==(a::Hildreth, b::Hildreth)::Bool
 
 Checks equality of two hildreth model structs. Does not check for object
 equality, only value equality.
 """
 #FIXME Update to  new model
-function ==(a::HildrethModel, b::HildrethModel)::Bool
+function ==(a::Hildreth, b::Hildreth)::Bool
     return a.E == b.E &&
            a.F == b.F &&
            a.E_fact == b.E_fact &&
@@ -127,11 +123,11 @@ function ==(a::HildrethModel, b::HildrethModel)::Bool
 end
 
 """
-    valid_unconstrained(model::HildrethModel)::Bool
+    valid_unconstrained(model::Hildreth)::Bool
 
 Returns true if the initial minimum is within the constraints.
 """
-function valid_unconstrained(model::HildrethModel)::Bool
+function valid_unconstrained(model::Hildreth)::Bool
     valid = get_constraintmatrix(model)' * model.ucSoln - get_constraintvector(model)
     for v in valid
         if v > 0
@@ -146,11 +142,11 @@ end
 
 Sets the model's solution element (Soln) to the unconstrained solution (ucSoln)
 """
-function set_unconstrained!(model::HildrethModel)
+function set_unconstrained!(model::Hildreth)
     model.Soln = model.ucSoln
 end
 
-function is_empty(model::HildrethModel)
+function is_empty(model::Hildreth)
     #Best solution I could find quickly, probably better ways of doing it.
     E() = try
               return model.E
@@ -182,11 +178,11 @@ struct SC_HildrethConvergence <: StoppingCondition
 end
 
 """
-    stopcondition(model::HildrethModel, convergence::SC_HildrethConvergence)
+    stopcondition(model::Hildreth, convergence::SC_HildrethConvergence)
 
 Convergence checking for original Hildreth implementation.
 """
-function stopcondition(model::HildrethModel, 
+function stopcondition(model::Hildreth, 
                        convergence::SC_HildrethConvergence
                        )::Bool
     λ = model.λ
@@ -195,7 +191,7 @@ function stopcondition(model::HildrethModel,
 end
 
 """
-    resolver!(model::HildrethModel)
+    resolver!(model::Hildreth)
 
 Calculates the primal result after convergence is met with the equation:
 
@@ -206,7 +202,7 @@ for the problem: min 1/2(x'Ex) + F'x s.t. Mx <= γ
 Where E_f is the factorised form of E in the problem statement, and λ is
 a working variable of the row action method.
 """
-function resolver!(model::HildrethModel)
+function resolver!(model::Hildreth)
     Ef = model.E_fact
     F = model.F
     Mt = get_constraintmatrix(model)
@@ -214,7 +210,7 @@ function resolver!(model::HildrethModel)
     model.Soln = -(Ef\(F + Mt * λ))
 end
 
-function variable_values(model::HildrethModel)
+function variable_values(model::Hildreth)
     if model.Soln == nothing 
         throw(ErrorException("Attempt to access answer value before any iterations have completed."))
     else
@@ -222,7 +218,7 @@ function variable_values(model::HildrethModel)
     end
 end
 
-function objective_value(model::HildrethModel)
+function objective_value(model::Hildreth)
     if model.Soln == nothing 
         throw(ErrorException("Attempt to access answer value before any iterations have completed."))
     else

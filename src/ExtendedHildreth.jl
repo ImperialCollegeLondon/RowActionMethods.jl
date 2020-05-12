@@ -1,15 +1,13 @@
 using LinearAlgebra
 export ExtendedHildreth
 
-struct ExtendedHildreth <: RowActionMethod end
-
 #TODO Implement almost-cyclic functionality
 #TODO Vectorise implementation of algorithm - possibly unneeded?
 #TODO Find neater method of initialisaiton than unions of desired types and nothing
 #TODO Add methods to check convergence.
 
 """
-    ExtendedHildrethModel
+    ExtendedHildreth
 
 A model for solving the problem with the extended Hildreth's method,
 presented by Lent and Censor.
@@ -28,7 +26,7 @@ from:
 B=D'D (Cholesky decomposition)
 y=inv(D)x-inv(B)d
 """
-mutable struct ExtendedHildrethModel <: ModelFormulation
+mutable struct ExtendedHildreth <: ModelFormulation
     #Original problem
     y::Union{Vector{Float64},Nothing}#Solution
     B::Array{Float64}
@@ -52,7 +50,7 @@ mutable struct ExtendedHildrethModel <: ModelFormulation
 end
 """
     GetModel(::ExtendedHildreth, z_initial::Union{Vector{Number}, Number}, 
-    relaxation_func::Function)::ExtendedHildrethModel
+    relaxation_func::Function)::ExtendedHildreth
 
 Returns a skeleton model of the problem for solving with the extended Hildreth's modethod. 
 
@@ -63,8 +61,8 @@ This method supports the inclusion of a relaxation parameter, this is a scaling 
 function GetModel(::ExtendedHildreth, 
                    z_initial::Union{Vector{Number}, Number},
                    relaxation_func::Function
-                  )::ExtendedHildrethModel
-    return ExtendedHildrethModel(Nothing(),[],[],[],[],0,0,
+                  )::ExtendedHildreth
+    return ExtendedHildreth(Nothing(),[],[],[],[],0,0,
                                  Nothing(),Nothing(),[],[],
                                  0,[],[],
                                  relaxation_func, z_initial)
@@ -104,7 +102,7 @@ function GetModel(::ExtendedHildreth; options...)
     return GetModel(ExtendedHildreth(), z, relaxation)
 end
 
-function buildmodel!(model::ExtendedHildrethModel, B, d, G, h)
+function buildmodel!(model::ExtendedHildreth, B, d, G, h)
     model.B=B
     model.d=d
     model.G=G
@@ -132,7 +130,7 @@ function buildmodel!(model::ExtendedHildrethModel, B, d, G, h)
 end
 
 #slightly unsure about the algorithm 
-function iterate!(model::ExtendedHildrethModel)
+function iterate!(model::ExtendedHildreth)
     #c = min(zᵢ, uᵢ)
     #uᵢ = r * (bᵢ-⟨aᵢ,x⟩)/∥aᵢ∥²
     #xₖ₊₁ = xₖ+c_aᵢ
@@ -163,33 +161,33 @@ function iterate!(model::ExtendedHildrethModel)
 end
 
 """
-    validmodel(model::ExtendedHildrethModel)::Bool
+    validmodel(model::ExtendedHildreth)::Bool
 
 Method doesn't implement a prior check for viability, therefore function
 always returns false to ensure that solver runs. 
 """
-function valid_unconstrained(model::ExtendedHildrethModel)::Bool
+function valid_unconstrained(model::ExtendedHildreth)::Bool
     return false
 end
 
 """
-    get_unconstrained(model::ExtendedHildrethModel)
+    get_unconstrained(model::ExtendedHildreth)
 
 As a prior check for viability is never resolved as true, this method 
 does nothing.
 """
-function get_unconstrained(model::ExtendedHildrethModel)
+function get_unconstrained(model::ExtendedHildreth)
 end
 
-function get_iterations(model::ExtendedHildrethModel)::Int
+function get_iterations(model::ExtendedHildreth)::Int
     return model.iterations
 end
 
-function resolver!(model::ExtendedHildrethModel)
+function resolver!(model::ExtendedHildreth)
     model.y = model.D\model.x - model.B_chol\model.d
 end
 
-function answer(model::ExtendedHildrethModel)
+function answer(model::ExtendedHildreth)
     if model.y == nothing
         throw(ErrorException("Attempt to access answer value before any iterations have completed."))
     else

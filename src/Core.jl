@@ -1,4 +1,6 @@
-mutable struct RAM_Components{T}
+export GetModel
+
+mutable struct RAM_Core{T}
     variable_count::Int
     #Maps constraint index var to constraint matrix/value
     constraints::OrderedDict{Int,ConstraintEntry{T}}
@@ -8,8 +10,9 @@ mutable struct RAM_Components{T}
     constraint_count::Int
     termination_condition::ram_termination_condition
     iterations::Int
+    model::ModelFormulation
 
-    function RAM_Components{T}() where {T}
+    function RAM_Core{T}(model::String) where T
         status = new()
         status.constraints = OrderedDict{Int,ConstraintEntry{T}}()
         status.variable_count = 0
@@ -17,14 +20,15 @@ mutable struct RAM_Components{T}
         status.constraint_count = 0
         status.termination_condition = RAM_OPTIMIZE_NOT_CALLED
         status.iterations = 0
+        status.model = method_mapping[model]{T}()
         return status
     end
 end
 
 #TODO this should have a return, and it seems like its use isn't consistent in MOI
-function GetModel(model::String)::ModelFormulation
+function GetModel(model::String)::RAM_Core
     !haskey(method_mapping, model) && error("Invalid Solver")
-    GetModel(method_mapping[model])
+    return RAM_Core{Float64}(model)
 end
 
 
