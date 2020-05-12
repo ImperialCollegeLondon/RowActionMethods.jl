@@ -6,6 +6,7 @@ mutable struct ConstraintEntry{T}
     lim::T
 end
 
+#TODO this should be reworked to contain the problem, rather than the problem containing this
 mutable struct RAM_Components{T}
     variable_count::Int
     #Maps constraint index var to constraint matrix/value
