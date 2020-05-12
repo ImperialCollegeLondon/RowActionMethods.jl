@@ -16,6 +16,20 @@ struct SC_Iterations <: StoppingCondition
     value::Int64
 end
 
+"""
+    get_SC(constraints...)
+
+Helper function to form a list of stopping conditions.
+"""
+function get_SC(conditions::StoppingCondition...)::MultipleStopCondition
+    return MultipleStopCondition(collect(conditions))
+end
+
+"""
+    MultipleStopCondition(num)
+
+A stop condition that holds several other stop conditions
+"""
 struct MultipleStopCondition <: StoppingCondition
     conditions::Vector{StoppingCondition}
 end

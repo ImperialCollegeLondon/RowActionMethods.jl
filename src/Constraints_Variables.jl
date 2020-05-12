@@ -1,4 +1,3 @@
-using DataStructures
 
 #TODO Add sparse vectors in Constraint entry
 mutable struct ConstraintEntry{T}
@@ -7,28 +6,6 @@ mutable struct ConstraintEntry{T}
 end
 
 #TODO this should be reworked to contain the problem, rather than the problem containing this
-mutable struct RAM_Components{T}
-    variable_count::Int
-    #Maps constraint index var to constraint matrix/value
-    constraints::OrderedDict{Int,ConstraintEntry{T}}
-    #Tracks largest constraint to ensure a unique new index
-    max_constraint_index::Int
-    #Track number of constraints
-    constraint_count::Int
-    termination_condition::ram_termination_condition
-    iterations::Int
-
-    function RAM_Components{T}() where {T}
-        status = new()
-        status.constraints = OrderedDict{Int,ConstraintEntry{T}}()
-        status.variable_count = 0
-        status.max_constraint_index = 0
-        status.constraint_count = 0
-        status.termination_condition = RAM_OPTIMIZE_NOT_CALLED
-        status.iterations = 0
-        return status
-    end
-end
 
 """
     setconstraint!(model::ModelFormulation, M_row::Vector{T}, lim::T) where T
