@@ -1,6 +1,7 @@
 module RowActionMethods
 
 using DataStructures
+using SparseArrays
 
 #TODO Standardise notation between methods
 #=
