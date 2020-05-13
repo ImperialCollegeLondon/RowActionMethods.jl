@@ -14,37 +14,25 @@ E_fact - factorised representation of E\n
 workingvars - a Dict of values adjusted between iterations\n
 options - [currently unused] specific values used for setting solver-specific values
 """
-#TODO change to parametric type
 mutable struct Hildreth{T} <: ModelFormulation
     #QP matrix
-    E::Array{T}
+    E::SparseMatrixIndex
     #QP vector
-    F::Vector{T}
-    H::Array{T}
-    K::Vector{T}
-    ucSoln::Vector{T}
-    Soln::Vector{T}
-    E_fact::Union{Bidiagonal,Factorization,Array,Diagonal}
-    #TODO types
-    λ
-    λ_old
+    F::SparseVectorIndex
 
-    function Hildreth{T}() where T
-        model = new()
-        return model
-    end
+    H::SparseMatrixIndex
+    K::SparseVectorIndex
+    ucSoln::SparseVectorIndex
+    Soln::SparseVectorIndex
+    E_fact::SparseMatrixIndex
+    λ::SparseVectorIndex
+    λ_old::SparseVectorIndex
+
+    Hildreth{T}() where T = new()
+
 end
 
-
-"""
-    GetModel(::Hildreth)::Hildreth
-    
-Returns a seleton model of the problem for solving with Hildreth's orignal
-method.
-"""
-function GetModel(::Hildreth)::Hildreth
-    return Hildreth()
-end
+ObjectiveType(::Hildreth) = Quadratic()
 
 """
     iterate!(model::Hildreth)
@@ -54,9 +42,11 @@ Performs one iteration of the algorithm. Updates λ as it progresses.
 Treats the entire summation as a calculation of H_i * λ, then subtracts the 
 contribution of the currently considered λ. 
 """
-function iterate!(model::Hildreth)
-    λ = model.λ
-    model.λ_old = copy(λ)
+iterate_args(::Hildreth) = [:λ, :λ_old, :H, :K]
+
+function Iterate(method::Hildreth, model::RAMProblem)
+    λ = GetSparse(model.λ)
+
     H = model.H
     K = model.K
     
@@ -69,18 +59,16 @@ function iterate!(model::Hildreth)
 end
 
 """
-    setobjective!(model::Hildreth, E::Array{T, 2}, F::Vector{T}, num_vars::Int) where T
+    Setup
 
-Sets the objective function for the problem. Hildreth's algorithm requires that 
-E is positive definite. The number of problem variables is also needed.
 """
-function setobjective!(model::Hildreth, E::Array{T, 2}, F::Vector{T}, num_vars::Int) where T
-    model.E = E
-    model.F = F
-    model.status.variable_count = num_vars
+function Setup(method::Hildreth, E, F)
+    method.E = E
+    method.F = F
 end
 
 
+#TODO ref update
 function shrinkobjective(model::Hildreth, index::Int)
     model.E = model.E[setdiff(1:end, index), setdiff(1:end, index)]
     deleteat!(model.F, index)
@@ -91,35 +79,22 @@ end
 
 Builds the internal variables based on problem specification
 """
-function buildmodel!(model::Hildreth)
+function Build(method::Hildreth, model)
     Mt = get_constraintmatrix(model)
     M = Mt'
     γ = get_constraintvector(model)
+    E = GetSparse(model, method.E)
+    F = GetSparse(model, method.F)
 
-    model.E_fact    = cholesky(model.E)
-    model.H         = M * (model.E_fact\Mt)
-    model.K         = γ + (M * (model.E_fact\model.F))
-    model.ucSoln    = -(model.E_fact\model.F)
-    model.λ         = zeros(model.status.constraint_count)
-    model.λ_old     = zeros(model.status.constraint_count)
-end
+    method.E_fact    = RegisterSparse(model, cholesky(E))
+    E_fact           = GetSparse(model, method.E_fact)
 
-"""
-    ==(a::Hildreth, b::Hildreth)::Bool
+    method.H         = RegisterSparse(model, M * (E_fact\Mt))
+    method.K         = RegisterSparse(model, γ + (M * (E_fact\F)))
+    method.ucSoln    = RegisterSparse(model, -E_fact\F)
 
-Checks equality of two hildreth model structs. Does not check for object
-equality, only value equality.
-"""
-#FIXME Update to  new model
-function ==(a::Hildreth, b::Hildreth)::Bool
-    return a.E == b.E &&
-           a.F == b.F &&
-           a.E_fact == b.E_fact &&
-           a.H == b.H &&
-           a.K == b.K &&
-           a.ucSoln == b.ucSoln &&
-           a.λ == b.λ &&
-           a.λ_old == b.λ_old
+    method.λ         = RegisterSparse(model, zeros(model.constraint_count))
+    method.λ_old     = RegisterSparse(model, zeros(model.constraint_count))
 end
 
 """
@@ -128,7 +103,7 @@ end
 Returns true if the initial minimum is within the constraints.
 """
 function valid_unconstrained(model::Hildreth)::Bool
-    valid = get_constraintmatrix(model)' * model.ucSoln - get_constraintvector(model)
+    valid = get_constraintmatrix(model)' * GetSparse(model.ucSoln) - get_constraintvector(model)
     for v in valid
         if v > 0
             return false
@@ -161,7 +136,7 @@ function is_empty(model::Hildreth)
 
     @debug "Empty model test results:" E = E() F = F() status = empty_model_status(model)
 
-    return E() == [] && F() == [] && empty_model_status(model)
+    return GetSparse(E()) == [] && GetSparse(F()) == [] && empty_model_status(model)
 end
 
 """
@@ -173,6 +148,7 @@ A stop condition that implements the following convergence check:
 ``` 
 Where 'limit' is the value below which computation will halt. 
 """
+#TODO naming convention
 struct SC_HildrethConvergence <: StoppingCondition
     value ::Float64
 end
@@ -203,11 +179,11 @@ Where E_f is the factorised form of E in the problem statement, and λ is
 a working variable of the row action method.
 """
 function resolver!(model::Hildreth)
-    Ef = model.E_fact
-    F = model.F
-    Mt = get_constraintmatrix(model)
-    λ = model.λ
-    model.Soln = -(Ef\(F + Mt * λ))
+    Ef = GetSparse(model.E_fact)
+    F  = GetSparse(model.F)
+    Mt = GetSparse(get_constraintmatrix(model))
+    λ  = GetSparse(model.λ)
+    model.Soln = RegisterSparse(-(Ef\(F + Mt * λ)))
 end
 
 function variable_values(model::Hildreth)
