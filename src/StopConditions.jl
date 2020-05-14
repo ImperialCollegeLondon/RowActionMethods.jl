@@ -53,7 +53,7 @@ end
 
 Checks if any conditions with a MultipleStopCondition type are met.
 """
-function stopcondition(model::ModelFormulation,
+function stopcondition(model::RAMProblem,
                        checks::MultipleStopCondition
                       )#::Bool
     for c in checks.conditions
@@ -70,10 +70,10 @@ end
 
 Checks if the number of iterations has exceeded a maximum.
 """
-function stopcondition(model::ModelFormulation, 
+function stopcondition(model::RAMProblem, 
                        iterations_limit::SC_Iterations
                       )#::Tuple(Bool,internal_termination_conditions)
-    return model.status.iterations >= iterations_limit.value, RAM_ITERATION_LIMIT
+    return model.iterations >= iterations_limit.value, RAM_ITERATION_LIMIT
 end
 
 
@@ -87,26 +87,15 @@ Note that the termination variables should be mapped to the MathOptInterface ter
 status codes in MOI_wrapper.jl. If your stopping condition fits an MOI condition that has
 not been implemented, then please update the wrapper accordingly.
 """
-function check_stopcondition!(model::ModelFormulation,
-                             conditions::StoppingCondition)::Bool
+function check_stopcondition!(model::RAMProblem,
+                              conditions::StoppingCondition)::Bool
     stop, status = stopcondition(model, conditions)
-
-	if stop
-        set_termination_status!(model, status)
-	end	
+	stop && set_termination_status!(model, status)
 
 	return stop
 end
 
-@enum(ram_termination_condition,
-RAM_OPTIMIZE_NOT_CALLED,
-RAM_OPTIMAL, RAM_INFEASIBLE,
-RAM_ITERATION_LIMIT, RAM_TIME_LIMIT)
 
-function get_termination_status(model::ModelFormulation)::ram_termination_condition
-    return model.status.termination_condition
-end
-
-function set_termination_status!(model::ModelFormulation, status::ram_termination_condition)
-    return model.status.termination_condition = status
+function set_termination_status!(model::RAMProblem, status::ram_termination_condition)
+    return model.termination_condition = status
 end
