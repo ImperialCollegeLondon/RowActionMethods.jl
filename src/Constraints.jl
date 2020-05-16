@@ -138,13 +138,11 @@ function edit_constraint_constant!(model::RAMProblem, con_index::Int, val::Float
 end
 
 #TODO parametric type
-function empty_model_status(model::RAMProblem)
-    s = model
-    empty = s.constraints == OrderedDict{Int,ConstraintEntry{Float64}}() &&
-            s.variable_count == 0 &&
-            s.max_constraint_index == 0 &&
-            s.constraint_count == 0 &&
-            s.termination_condition == RAM_OPTIMIZE_NOT_CALLED &&
-            s.iterations == 0
-   return empty
+function is_model_empty(model::RAMProblem)
+    return model.constraints == OrderedDict{Int,ConstraintEntry{Float64}}() &&
+           model.variable_count == 0 &&
+           model.max_constraint_index == 0 &&
+           model.constraint_count == 0 &&
+           model.termination_condition == RAM_OPTIMIZE_NOT_CALLED &&
+           model.iterations == 0
 end
