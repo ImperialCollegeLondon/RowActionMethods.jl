@@ -16,8 +16,6 @@ Subject to the constraints: Mx <= γ
 using LinearAlgebra
 using Logging
 
-export iterate_model!, GetModel, buildmodel!, answer, get_SC
-
 const RAM = RowActionMethods
 export RAM
 
@@ -25,7 +23,7 @@ include("./Types.jl")
 include("./StopConditions.jl")
 include("./MOI_wrapper.jl")
 include("./Benchmarks.jl")
-include("./Constraints_Variables.jl")
+include("./Constraints.jl")
 include("./Core.jl")
 
 #Method includes 
