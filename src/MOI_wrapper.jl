@@ -8,33 +8,28 @@ const RAM = RowActionMethods
 
 mutable struct Optimizer <: MOI.AbstractOptimizer
 
-    method::RAM.RowActionMethod
-    inner_model::RAM.ModelFormulation
-    sense::MOI.OptimizationSense
+    inner_model::RAM.RAMProblem
     name::String
+    method::String
 
+    sense::MOI.OptimizationSense
     variable_count::Int
     constraints::Vector{MOI.ConstraintIndex}
 
-    stopping_conditions::Union{RAM.StoppingCondition, Bool}
+    stopping_conditions::Union{RAM.StoppingCondition, Nothing}
 
     silent::Bool #True means nothing should be printed
 
     function Optimizer(method::String;kwargs...)
         model = new()
 
-        if !haskey(RAM.method_mapping, method) 
-            throw(ArgumentError("Invalid row action method specified, valid" *
-                                " methods are: $(keys(RAM.method_mapping))"))
-        end
-        
         model.name = "RowActionMethods-$method"
-        model.method = RAM.method_mapping[method]
+        model.method = method
         model.silent = false
         model.variable_count = 0
         model.constraints = Vector{MOI.ConstraintIndex}()
                                   
-        model.stopping_conditions = false
+        model.stopping_conditions = nothing
 
         for (key, val) in kwargs
             MOI.set(model, MOI.RawParameter(String(key)), val)
@@ -48,15 +43,12 @@ end
 
 #= Model Actions =#
 function MOI.optimize!(model::Optimizer)
-    RAM.buildmodel!(model.inner_model)
-    if model.stopping_conditions == false
-        RAM.iterate_model!(model.inner_model)
-    else
-        RAM.iterate_model!(model.inner_model, model.stopping_conditions)
-    end
+    RAM.Build(model.inner_model)
+    RAM.Optimize(model.inner_model, model.stopping_conditions)
 end
 
 #= Custom Options =#
+#TODO rethink this interface, especially for stopping conditions
 function MOI.set(model::Optimizer, option::MOI.RawParameter, val) 
     if option.name == "iterations"
         model.stopping_conditions = RAM.SC_Iterations(val)
@@ -68,13 +60,19 @@ function MOI.set(model::Optimizer, option::MOI.RawParameter, val)
 end
 
 #= Model Status =#
-function MOI.supports(::Optimizer, 
+function MOI.supports(model::Optimizer, 
                       ::MOI.ObjectiveFunction{MOI.ScalarQuadraticFunction{Float64}})
-    return true
+    return RAM.ObjectiveType(model.inner_model) == RAM.Quadratic()
+end
+
+function MOI.supports(model::Optimizer, 
+                      ::MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}})
+    return RAM.ObjectiveType(model.inner_model) == RAM.Linear()
 end
 
 MOI.supports(::Optimizer, ::MOI.ObjectiveSense) = true
 
+#FIXME: functions don't exist
 function MOI.is_empty(model::Optimizer)::Bool
     return RAM.is_empty(model.inner_model)
 end
@@ -175,6 +173,7 @@ function MOI.set(model::Optimizer, ::MOI.ConstraintSet, c::MOI.ConstraintIndex{F
 end
 
 #= MOI.set functions =#
+#TODO objective set functions for non quadratic functions, if non quadratic solvers are added
 function MOI.set(model::Optimizer, 
                  ::MOI.ObjectiveFunction{F}, 
                  val::F) where {F <: MOI.ScalarQuadraticFunction{Float64}} 
@@ -182,19 +181,22 @@ function MOI.set(model::Optimizer,
     num_vars = model.variable_count
     Q = zeros(num_vars, num_vars)
     a = zeros(num_vars)
+
+    sense = model.sense == MOI.MAX_SENSE ? -1 : 1
     
     for t in val.quadratic_terms
-        Q[t.variable_index_1.value, t.variable_index_2.value] = t.coefficient
-        Q[t.variable_index_2.value, t.variable_index_1.value] = t.coefficient
+        Q[t.variable_index_1.value, t.variable_index_2.value] = sense * t.coefficient
+        Q[t.variable_index_2.value, t.variable_index_1.value] = sense * t.coefficient
     end
 
     for t in val.affine_terms
-        a[t.variable_index.value] = t.coefficient
+        a[t.variable_index.value] = sense * t.coefficient
     end
 
-    setobjective!(model.inner_model, Q, a, num_vars)
+    RAM.Setup(model.inner_model, Q, a, num_vars)
 end
 
+#TODO implement in RAMProblem
 function MOI.set(model::Optimizer, ::MOI.Silent, val::Bool)
     model.silent = val
 end
@@ -239,8 +241,7 @@ function MOI.get(model::Optimizer, ::MOI.ObjectiveValue)
 end
 
 function MOI.get(model::Optimizer, ::MOI.VariablePrimal, vi::MOI.VariableIndex)
-    sense = model.sense == MOI.MAX_SENSE ? -1 : 1
-    return sense * RAM.variable_values(model.inner_model)[vi.value]
+    return RAM.GetVariables(model.inner_model)[vi.value]
 end
 
 #= MOI Copy Functions =#

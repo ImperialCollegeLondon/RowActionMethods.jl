@@ -128,15 +128,17 @@ function jump_generate_test(model::JuMP.Model, n::Int, m::Int)
     end
     
     JuMP.@constraint(model, con, M*x .<= γ)
+    return x
 end
 
 function jump_generate_multiple(count::Int, n::Int, m::Int; identical::Bool=false)::Vector{JuMP.Model}
     models = JuMP.Model[]
+    vars = []
     
     if identical == false
         for i in 1:count
             model = JuMP.Model()
-            jump_generate_test(model, n, m)
+            push!(vars, jump_generate_test(model, n, m))
             push!(models, model)
         end
     else
@@ -147,5 +149,5 @@ function jump_generate_multiple(count::Int, n::Int, m::Int; identical::Bool=fals
         end
     end
 
-    return models
+    return models, vars
 end

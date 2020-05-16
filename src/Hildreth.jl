@@ -120,22 +120,15 @@ function set_unconstrained!(model::Hildreth)
     model.Soln = model.ucSoln
 end
 
-function is_empty(model::Hildreth)
+function is_empty(method::RAMProblem, model::Hildreth)
     #Best solution I could find quickly, probably better ways of doing it.
-    E() = try
-              return model.E
-          catch UndefRefError
-              return []
-          end
-    F() = try
-              return model.F
-          catch UndefRefError
-              return []
-          end
+    entry(sym) = try
+                    return GetSparse(model, getproperty(method, sym))
+                 catch UndefRefError
+                    return []
+                 end
 
-    @debug "Empty model test results:" E = E() F = F() status = empty_model_status(model)
-
-    return GetSparse(E()) == [] && GetSparse(F()) == [] && empty_model_status(model)
+    return isempty(entry(:E)) && isempty(entry(:F))
 end
 
 """

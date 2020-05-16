@@ -25,9 +25,13 @@ GetSparse(model::RAMProblem, index::SparseVectorIndex)::SparseVector = model.Spa
 
 #TODO this should have a return, and it seems like its use isn't consistent in MOI
 function GetModel(model::String)::RAMProblem
-    !haskey(method_mapping, model) && error("Invalid Solver")
+    !haskey(method_mapping, model) && 
+            throw(ArgumentError("Invalid row action method specified, valid" *
+                                " methods are: $(keys(RAM.method_mapping))"))
     return RAMProblem{Float64}(model)
 end
+
+ObjectiveType(model::RAMProblem) = ObjectiveType(model.method)
 
 #TODO generalise to other objectives (input vars, and option in else/if)
 function Setup(model::RAMProblem, Q::Matrix, F::Vector, variables::Int)
@@ -55,6 +59,8 @@ function Resolve(model::RAMProblem)
     Resolve(model, model.method, args...)
 end
 
+
+
 """
     iterate_model!(model::ModelFormulation)
 
@@ -64,6 +70,8 @@ function Optimize(model::RAMProblem)
     conditions = get_SC(SC_Iterations(32)) 
     Optimize(model, conditions)
 end
+
+Optimize(model::RAMProblem, ::Nothing) = Optimize(model)
 
 GetVariables(model::RAMProblem) = GetVariables(model, model.method)
 
@@ -84,7 +92,9 @@ function Optimize(model::RAMProblem,
     end
 
     #Calculate solution
-    Resolve(model)
+   Resolve(model)
 end
 
 
+is_empty(model::RAMProblem) = is_empty(model, model.method) && is_model_empty(model)
+get_termination_status(model::RAMProblem) = model.termination_condition
