@@ -110,7 +110,11 @@ end
 function MOI.delete(model::Optimizer, index::MOI.VariableIndex)
     #TODO add support for deletion when constraints exist
     #TODO understand what affect this has on objective
-    RAM.delete_variable!(model.inner_model, index.value)
+    try
+        RAM.delete_variable!(model.inner_model, index.value)
+    catch
+        throw(MOI.DeleteNoteAllowed)
+    end
 end
 
 #= Constraints =#

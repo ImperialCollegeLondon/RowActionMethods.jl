@@ -11,7 +11,10 @@ Returns a UID value that the solver can use to map to the value if modifying,
 viewing, or deleting the values. UID is based off the number of constraints
 that have ever been added, not the current number.
 """
-function addconstraint!(model::RAMProblem, M_row::Vector{T}, lim::T)::Int where T
+(addconstraint!(model::RAMProblem{T}, M_row::Vector, lim)::Int) where T =
+    addconstraint!(model, convert(Vector{T}, M_row), convert(T, lim))
+
+function addconstraint!(model::RAMProblem{T}, M_row::Vector{T}, lim::T)::Int where T
     !validconstraint(model, M_row, lim) && error("Invalid constraint, have you added an objective?")
     
     #Ensures unique constraint index
@@ -65,6 +68,8 @@ function shrinkconstraints(model::RAMProblem, index::Int)
     filter!(c -> !check_emptyconstraint(c.second), model.constraints)
 end
 
+#TODO: Move to a more appropriate place
+#TODO: This will likely improve when moving to sparse matrices.
 """
     delete_variable!(model::ModelFormulation, index::Int)
 
@@ -75,12 +80,19 @@ a consistent internal state.
 Note that the act of removing a variable from the objective function is
 currently expensive when using a very large number of variables. This shouldn't
 be an issue unless changing variables at a very regular interval.
-TODO: This will likely improve when moving to sparse matrices.
 """
 function delete_variable!(model::RAMProblem, index::Int)
+    SupportsVariableDeletion(model.method) || error("Method does not support variable deletion")
     model.variable_count -= 1
     shrinkconstraints(model, index)
-    shrinkobjective(model, index)
+    DeleteVariable(model.method, index)
+    DeleteSparse(model, index)
+end
+
+function DeleteSparse(model::RAMProblem, index::Int)
+    for m in model.SparseMatrices
+        m[index::]
+    end
 end
 
 """

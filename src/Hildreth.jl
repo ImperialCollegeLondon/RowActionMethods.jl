@@ -33,9 +33,15 @@ mutable struct Hildreth{T} <: ModelFormulation
 end
 
 ObjectiveType(::Hildreth) = Quadratic()
+SupportsVariableDeletion(::Hildreth) = true 
+
+function DeleteVariable(method::Hildreth, index)
+    method.λ[index] = 0.0
+    method.λ_old[index] = 0.0
+end
 
 """
-    iterate!(model::Hildreth)
+    Iterate(model::Hildreth)
 
 Performs one iteration of the algorithm. Updates λ as it progresses.
 
@@ -43,7 +49,6 @@ Treats the entire summation as a calculation of H_i * λ, then subtracts the
 contribution of the currently considered λ. 
 """
 iterate_args(::Hildreth) = [:H, :K]
-
 function Iterate(model::RAMProblem, method::Hildreth, H, K)
     method.λ_old = method.λ
     for i in 1:model.constraint_count
@@ -63,15 +68,8 @@ function Setup(method::Hildreth, E, F)
     method.F = F
 end
 
-
-#TODO ref update
-function shrinkobjective(model::Hildreth, index::Int)
-    model.E = model.E[setdiff(1:end, index), setdiff(1:end, index)]
-    deleteat!(model.F, index)
-end
-
 """
-    buildmodel(model::Hildreth)
+    Build(model::Hildreth)
 
 Builds the internal variables based on problem specification
 """

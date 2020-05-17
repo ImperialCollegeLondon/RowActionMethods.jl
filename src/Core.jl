@@ -1,4 +1,4 @@
-export GetModel
+export GetModel, Setup, Build, Optimize
 
 
 struct SparseMatrixIndex
@@ -90,6 +90,7 @@ function Optimize(model::RAMProblem,
         Iterate(model)
         model.iterations += 1
     end
+
 
     #Calculate solution
    Resolve(model)
