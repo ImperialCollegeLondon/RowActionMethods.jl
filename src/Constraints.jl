@@ -89,12 +89,6 @@ function delete_variable!(model::RAMProblem, index::Int)
     DeleteSparse(model, index)
 end
 
-function DeleteSparse(model::RAMProblem, index::Int)
-    for m in model.SparseMatrices
-        m[index::]
-    end
-end
-
 """
     check_emptyconstraint(con::ConstraintEntry)::Bool
 

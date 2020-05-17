@@ -20,6 +20,14 @@ struct Quadratic <: AbstractObjectiveType end
 struct Linear <: AbstractObjectiveType end 
 ObjectiveType(m::ModelFormulation) = error("$(typeof(m)) should define an objective function type")
 
+abstract type AbstractObjective end
+
+struct SparseQuadraticObjective{T} <: AbstractObjective
+    Q::SparseMatrixCSC{T}
+    F::SparseVector{T}
+    SparseQuadraticObjective{T}(Q,F) where T = new(sparse(Q), sparse(F))
+end
+
 #TODO Add sparse vectors in Constraint entry
 mutable struct ConstraintEntry{T}
     func::Vector{T}
@@ -44,9 +52,7 @@ mutable struct RAMProblem{T}
     constraint_count::Int
 
     #== Problem Description ==#
-    #TODO Cache most recent indexes possibly?
-    SparseMatrices::Vector{SparseMatrixCSC{T,Int64}}
-    SparseVectors::Vector{SparseVector{T,Int64}}
+    objective::AbstractObjective
 
     #== General ==#
     termination_condition::ram_termination_condition
@@ -61,10 +67,6 @@ mutable struct RAMProblem{T}
         p.max_constraint_index = 0
         p.constraint_count = 0
 
-        #== Problem ==#
-        p.SparseMatrices = []
-        p.SparseVectors = []
-
         p.variable_count = 0
         p.termination_condition = RAM_OPTIMIZE_NOT_CALLED
         p.iterations = 0
@@ -73,3 +75,4 @@ mutable struct RAMProblem{T}
         return p 
     end
 end
+

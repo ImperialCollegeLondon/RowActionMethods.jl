@@ -1,28 +1,5 @@
 export GetModel, Setup, Build, Optimize
 
-
-struct SparseMatrixIndex
-    value::Int64
-end
-
-struct SparseVectorIndex
-    value::Int64
-end
-
-function RegisterSparse(model::RAMProblem{T}, data::Matrix)::SparseMatrixIndex where T
-    push!(model.SparseMatrices, convert(Matrix{T}, data))
-    return SparseMatrixIndex(length(model.SparseMatrices))
-end
-
-function RegisterSparse(model::RAMProblem{T}, data::Vector)::SparseVectorIndex where T
-    push!(model.SparseVectors, convert(Vector{T}, data))
-    return SparseVectorIndex(length(model.SparseVectors))
-end
-
-GetSparse(model::RAMProblem, index::SparseMatrixIndex)::SparseMatrixCSC = model.SparseMatrices[index.value]
-
-GetSparse(model::RAMProblem, index::SparseVectorIndex)::SparseVector = model.SparseVectors[index.value]
-
 #TODO this should have a return, and it seems like its use isn't consistent in MOI
 function GetModel(model::String)::RAMProblem
     !haskey(method_mapping, model) && 
@@ -34,12 +11,10 @@ end
 ObjectiveType(model::RAMProblem) = ObjectiveType(model.method)
 
 #TODO generalise to other objectives (input vars, and option in else/if)
-function Setup(model::RAMProblem, Q::Matrix, F::Vector, variables::Int)
+function Setup(model::RAMProblem{T}, Q::AbstractMatrix, F::AbstractVector, variables::Int) where T
     if ObjectiveType(model.method) == Quadratic()
-        Q = RegisterSparse(model, Q)  
-        F = RegisterSparse(model, F)
+        model.objective = SparseQuadraticObjective{T}(Q,F)
         model.variable_count = variables
-        Setup(model.method, model, Q, F)
     else 
         error("Unsupported objective type")
     end
@@ -47,16 +22,27 @@ end
 
 Setup(method::ModelFormulation, model::RAMProblem, Q, F) = Setup(method, Q, F)
 
-Build(model::RAMProblem) = Build(model.method, model)
+Build(model::RAMProblem) = Build(model, model.method)
+
+GetObjective(model::RAMProblem) = GetObjective(model.objective)
+GetObjective(obj::SparseQuadraticObjective) = (obj.Q, obj.F)
 
 function Iterate(model::RAMProblem)
-    args = [GetSparse(model, getproperty(model.method, sym)) for sym in iterate_args(model.method)]
-    Iterate(model, model.method, args...)
+    args = [getproperty(model.method, sym) for sym in iterate_args(model.method)]
+    if length(args) > 0
+        Iterate(model, model.method, args...)
+    else
+        Iterate(model, model.method)
+    end
 end
 
 function Resolve(model::RAMProblem)
-    args = [GetSparse(model, getproperty(model.method, sym)) for sym in resolve_args(model.method)]
-    Resolve(model, model.method, args...)
+    args = [getproperty(model.method, sym) for sym in resolve_args(model.method)]
+    if length(args) > 0
+        Resolve(model, model.method, args...)
+    else
+        Resolve(model, model.method)
+    end
 end
 
 
@@ -99,3 +85,4 @@ end
 
 is_empty(model::RAMProblem) = is_empty(model, model.method) && is_model_empty(model)
 get_termination_status(model::RAMProblem) = model.termination_condition
+objective_value(model::RAMProblem) = objective_value(model, model.method)

@@ -15,16 +15,11 @@ workingvars - a Dict of values adjusted between iterations\n
 options - [currently unused] specific values used for setting solver-specific values
 """
 mutable struct Hildreth{T} <: ModelFormulation
-    #QP matrix
-    E::SparseMatrixIndex
-    #QP vector
-    F::SparseVectorIndex
-
-    H::SparseMatrixIndex
-    K::SparseVectorIndex
-    ucSoln::SparseVectorIndex
-    Soln::SparseVectorIndex
-    E_fact::SparseMatrixIndex
+    H::SparseMatrixCSC{T}
+    K::SparseVector{T}
+    ucSoln::SparseVector{T}
+    Soln::SparseVector{T}
+    E_fact::SparseMatrixCSC{T}
     λ::Vector{T}
     λ_old::Vector{T}
 
@@ -60,25 +55,15 @@ function Iterate(model::RAMProblem, method::Hildreth, H, K)
 end
 
 """
-    Setup
-
-"""
-function Setup(method::Hildreth, E, F)
-    method.E = E
-    method.F = F
-end
-
-"""
     Build(model::Hildreth)
 
 Builds the internal variables based on problem specification
 """
-function Build(method::Hildreth, model)
+function Build(model::RAMProblem, method::Hildreth)
     Mt = get_constraintmatrix(model)
     M = Mt'
     γ = get_constraintvector(model)
-    E = GetSparse(model, method.E)
-    F = GetSparse(model, method.F)
+    Q, F = GetObjective(model)
     
     #TODO: Likely an iterative solution that avoids casting F to a dense matrix
     F_v = Vector(F)
@@ -86,9 +71,11 @@ function Build(method::Hildreth, model)
     #method.E_fact    = RegisterSparse(model, cholesky(E))
     #E_fact           = GetSparse(model, method.E_fact)
 
-    method.H         = RegisterSparse(model, M * (E\Mt))
-    method.K         = RegisterSparse(model, γ + (M * (E\F_v)))
-    method.ucSoln    = RegisterSparse(model, -E\F_v)
+    
+    method.H         = M * (Q\Mt)
+    method.K         = γ + (M * (Q\F_v))
+    method.ucSoln    = -Q\F_v
+    method.Soln      = zeros(model.variable_count)
 
     method.λ         = zeros(model.constraint_count)
     method.λ_old     = zeros(model.constraint_count)
@@ -168,19 +155,18 @@ for the problem: min 1/2(x'Ex) + F'x s.t. Mx <= γ
 Where E_f is the factorised form of E in the problem statement, and λ is
 a working variable of the row action method.
 """
-resolve_args(::Hildreth) = [:E, :F]
-function Resolve(model::RAMProblem, method::Hildreth, E, F)
+resolve_args(::Hildreth) = [:λ]
+function Resolve(model::RAMProblem, method::Hildreth, λ)
     Mt = get_constraintmatrix(model)
-    method.Soln = RegisterSparse(model, -(E\Vector(F + Mt * method.λ)))
+    Q, F = GetObjective(model)
+    method.Soln = -(Q\Vector(F + Mt * λ))
 end
 
-GetVariables(model::RAMProblem, method::Hildreth) = GetSparse(model, method.Soln)
+GetVariables(model::RAMProblem, method::Hildreth) = method.Soln
 
-function objective_value(model::Hildreth)
-    if model.Soln == nothing 
-        throw(ErrorException("Attempt to access answer value before any iterations have completed."))
-    else
-        return 0.5 * (model.Soln' * model.E * model.Soln) + (model.Soln' * model.F)
-    end
+function objective_value(model::RAMProblem, method::Hildreth)
+    Q, F = GetObjective(model)
+    S = method.Soln
+    return 0.5 * (S' * Q * S) + (S' * F)
 end
 
