@@ -4,6 +4,7 @@ using JuMP
 #define. Each variables may be multivalued. 
 
 function QLR2_AN_4_6()
+  #Note; JuMP does not evaluate this QP problem to have a pos-def matrix
 
   problem = Model()
   #@variable(problem, x[i=1:4] >= 0, start = 0)

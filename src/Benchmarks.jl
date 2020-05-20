@@ -1,7 +1,7 @@
 using LinearAlgebra
 using BenchmarkTools
 using MathOptInterface
-import JuMP
+using JuMP
 
 function single_benchmark_ram(n, m, i)
     @benchmark JuMP.optimize!(model) setup=(model=JuMP.Model(JuMP.with_optimizer(RAM.Optimizer, "Hildreth", iterations=$i));
@@ -150,4 +150,28 @@ function jump_generate_multiple(count::Int, n::Int, m::Int; identical::Bool=fals
     end
 
     return models, vars
+end
+
+function jump_generate_pair(n, m)
+    E = generate_random_posdef_matrix(n, Float64)
+    F = generate_random_vector(n, Float64)
+
+    γ = generate_random_vector(m, Float64, non_zero_gen=1.0)
+    M = zeros(m,n)
+    for i=1:m
+        M[i,:] = generate_random_vector(n, Float64, zero_vectors=false) 
+    end
+
+    p1 = JuMP.Model()
+    @variable(p1, x[1:n])  
+    p2 = JuMP.Model()
+    @variable(p2, y[1:n])  
+    
+    @objective(p1, Min, 0.5sum(x[i]E[i,j]x[j] for i=1:n,j=1:n) + sum(x[i]F[i] for i=1:n))
+    @objective(p2, Min, 0.5sum(y[i]E[i,j]y[j] for i=1:n,j=1:n) + sum(y[i]F[i] for i=1:n))
+
+    @constraint(p1, M*x .<= γ)
+    @constraint(p2, M*y .<= γ)
+
+    return p1, x, p2, y
 end
