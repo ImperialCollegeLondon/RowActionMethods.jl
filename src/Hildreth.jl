@@ -15,8 +15,6 @@ workingvars - a Dict of values adjusted between iterations\n
 options - [currently unused] specific values used for setting solver-specific values
 """
 mutable struct Hildreth{T} <: ModelFormulation
-    D::SparseMatrixCSC{T}
-
     A::SparseMatrixCSC{T}
     b::SparseVector{T}
 
@@ -26,7 +24,14 @@ mutable struct Hildreth{T} <: ModelFormulation
     z::SparseVector{T}
     x::SparseVector{T}
 
-    Hildreth{T}() where T = new()
+    user_initial_point::Union{Nothing,Vector{T}}
+
+    function Hildreth{T}(;kwargs...) where T
+        m = new()
+        m.user_initial_point = 
+            haskey(kwargs, :initial) ? kwargs[:initial] : nothing
+        return m
+    end
 end
 
 ObjectiveType(::Hildreth) = Quadratic()
@@ -45,18 +50,10 @@ Builds the internal variables based on problem specification
 function Build(model::RAMProblem, method::Hildreth)
     G = get_constraintmatrix(model)'
     h = get_constraintvector(model)
-    B, d = GetObjective(model)
-    
-    #TODO: Likely an iterative solution that avoids casting F to a dense matrix
-    #TODO re-implement E_fact
-    #method.E_fact    = RegisterSparse(model, 
-    
-    #TODO is it required to cast to matrix here?
-    method.D        = cholesky(Matrix(B)).U
-    #E_fact           = GetSparse(model, method.E_fact)
 
+    B, d = GetObjectiveFactorised(model)
     
-    method.A        = G/method.D
+    method.A        = G/B.U
     method.b        = h + (G/B)d
 
     method.Δ        = (method.A * method.A')'
@@ -64,7 +61,11 @@ function Build(model::RAMProblem, method::Hildreth)
     method.n        = length(h)
 
     #TODO adjust this range depending on input value
-    method.z        = rand(0.1:0.1:10.0, method.n)
+    if method.user_initial_point == nothing
+        method.z = rand(0.1:0.1:10.0, method.n)
+    else
+        method.z = method.user_initial_point
+    end
     method.x        = -method.A'method.z
 end
 
@@ -130,10 +131,6 @@ end
 
 Calculates the primal result after convergence is met with the equation:
 
-    x = -(E_f\\(F + M^T * λ))
-
-for the problem: min 1/2(x'Ex) + F'x s.t. Mx <= γ
-
 Where E_f is the factorised form of E in the problem statement, and λ is
 a working variable of the row action method.
 """
@@ -143,7 +140,7 @@ function Resolve(model::RAMProblem, method::Hildreth, A, z)
 end
 
 function GetVariables(model::RAMProblem, method::Hildreth) 
-    B, d = GetObjective(model)
-    return method.D\method.x - B\Vector(d)
+    B, d = GetObjectiveFactorised(model)
+    return B.U\method.x - B\Vector(d)
 end
 
