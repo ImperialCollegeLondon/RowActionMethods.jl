@@ -108,13 +108,12 @@ function check_emptyconstraint(con::ConstraintEntry)::Bool
 end
 
 """
-    GetConstraintMatrix(model::ModelFormulation)::Matrix(Float64,2)
+    GetConstraintMatrix(model::RAMProblem{T})::Matrix{T} where T
 
-Forms the stored constraints into a transposed matrix form,
-ie the value Mᵀ is returned.
+Return the constraint matrix.
 """
 (GetConstraintMatrix(model::RAMProblem{T})::Matrix{T}) where T = 
-    reduce(hcat, [j.func for j in values(model.constraints)])
+    reduce(hcat, [j.func for j in values(model.constraints)])'
 
 (GetConstraintVector(model::RAMProblem{T})::Vector{T}) where T =
     [j.lim for j in values(model.constraints)]
