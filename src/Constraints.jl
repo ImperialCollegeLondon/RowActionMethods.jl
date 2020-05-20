@@ -113,16 +113,11 @@ end
 Forms the stored constraints into a transposed matrix form,
 ie the value Mᵀ is returned.
 """
-#TODO: Add type parameterisation
-function GetConstraintMatrix(model::RAMProblem{T})::Matrix{T} where T
-    a = hcat([j.func for j in values(model.constraints)]...)
-    return a
-end
+(GetConstraintMatrix(model::RAMProblem{T})::Matrix{T}) where T = 
+    reduce(hcat, [j.func for j in values(model.constraints)])
 
-#TODO: Add type parameterisation
-function GetConstraintVector(model::RAMProblem{T})::Vector{T} where T
-    return [j.lim for j in values(model.constraints)]
-end
+(GetConstraintVector(model::RAMProblem{T})::Vector{T}) where T =
+    [j.lim for j in values(model.constraints)]
 
 #TODO Add `reformulate` option to the model to indicate that the dual no longer represents the
 #constraints
