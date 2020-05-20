@@ -48,8 +48,8 @@ end
 Builds the internal variables based on problem specification
 """
 function Build(model::RAMProblem, method::Hildreth)
-    G = get_constraintmatrix(model)'
-    h = get_constraintvector(model)
+    G = GetconstraintMatrix(model)'
+    h = GetConstraintVector(model)
 
     B, d = GetObjectiveFactorised(model)
     
