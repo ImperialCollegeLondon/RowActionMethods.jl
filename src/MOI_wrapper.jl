@@ -129,7 +129,7 @@ function MOI.add_constraint(model::Optimizer,
         constraint_function[t.variable_index.value] = t.coefficient
     end
 
-    index = RAM.addconstraint!(model.inner_model, constraint_function, lim.upper)
+    index = RAM.AddConstraint(model.inner_model, constraint_function, lim.upper)
     constraint_index = MOI.ConstraintIndex{MOI.ScalarAffineFunction{Float64}, 
                                            MOI.LessThan{Float64}}(index) 
     push!(model.constraints, constraint_index)
@@ -197,7 +197,7 @@ function MOI.set(model::Optimizer,
         a[t.variable_index.value] = sense * t.coefficient
     end
 
-    RAM.Setup(model.inner_model, Q, a, num_vars)
+    RAM.Setup(model.inner_model, Q, a)
 end
 
 #TODO implement in RAMProblem
@@ -241,7 +241,7 @@ end
 
 function MOI.get(model::Optimizer, ::MOI.ObjectiveValue)
     sense = model.sense == MOI.MAX_SENSE ? -1 : 1
-    return sense * RAM.objective_value(model.inner_model)
+    return sense * RAM.ObjectiveValue(model.inner_model)
 end
 
 function MOI.get(model::Optimizer, ::MOI.VariablePrimal, vi::MOI.VariableIndex)
