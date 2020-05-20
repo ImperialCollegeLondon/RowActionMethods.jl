@@ -152,7 +152,7 @@ function jump_generate_multiple(count::Int, n::Int, m::Int; identical::Bool=fals
     return models, vars
 end
 
-function jump_generate_pair(n, m)
+function jump_generate_pair(n, m; solver1=()->RAM.Optimizer("Hildreth"),solver2=()->RAM.Optimizer("Hildreth"))
     E = generate_random_posdef_matrix(n, Float64)
     F = generate_random_vector(n, Float64)
 
@@ -172,6 +172,9 @@ function jump_generate_pair(n, m)
 
     @constraint(p1, M*x .<= γ)
     @constraint(p2, M*y .<= γ)
+
+    set_optimizer(p1, solver1)
+    set_optimizer(p2, solver2)
 
     return p1, x, p2, y
 end
