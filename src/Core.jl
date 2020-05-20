@@ -11,10 +11,10 @@ end
 ObjectiveType(model::RAMProblem) = ObjectiveType(model.method)
 
 #TODO generalise to other objectives (input vars, and option in else/if)
-function Setup(model::RAMProblem{T}, Q::AbstractMatrix, F::AbstractVector, variables::Int) where T
+function Setup(model::RAMProblem{T}, Q::AbstractMatrix, F::AbstractVector) where T
     if ObjectiveType(model.method) == Quadratic()
         model.objective = SparseQuadraticObjective{T}(Q,F)
-        model.variable_count = variables
+        model.variable_count = length(F)
     else 
         error("Unsupported objective type")
     end
@@ -85,4 +85,14 @@ end
 
 is_empty(model::RAMProblem) = is_empty(model, model.method) && is_model_empty(model)
 get_termination_status(model::RAMProblem) = model.termination_condition
-objective_value(model::RAMProblem) = objective_value(model, model.method)
+
+ObjectiveValue(model::RAMProblem) = 
+    ObjectiveValue(model, ObjectiveType(model.method))
+
+function ObjectiveValue(model::RAMProblem, ::Quadratic)
+    B, d = GetObjective(model)
+    x = GetVariables(model)
+
+    return 0.5*x'*B*x + x'*d
+end
+
