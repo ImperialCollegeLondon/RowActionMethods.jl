@@ -1,4 +1,4 @@
-
+export AddConstraint
 
 #TODO this should be reworked to contain the problem, rather than the problem containing this
 
@@ -11,10 +11,10 @@ Returns a UID value that the solver can use to map to the value if modifying,
 viewing, or deleting the values. UID is based off the number of constraints
 that have ever been added, not the current number.
 """
-(addconstraint!(model::RAMProblem{T}, M_row::Vector, lim)::Int) where T =
-    addconstraint!(model, convert(Vector{T}, M_row), convert(T, lim))
+(AddConstraint(model::RAMProblem{T}, M_row::Vector, lim)::Int) where T =
+    AddConstraint(model, convert(Vector{T}, M_row), convert(T, lim))
 
-function addconstraint!(model::RAMProblem{T}, M_row::Vector{T}, lim::T)::Int where T
+function AddConstraint(model::RAMProblem{T}, M_row::Vector{T}, lim::T)::Int where T
     !validconstraint(model, M_row, lim) && error("Invalid constraint, have you added an objective?")
     
     #Ensures unique constraint index
