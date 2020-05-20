@@ -1,3 +1,4 @@
+using SuiteSparse
 """
 All variables used in the actual computation should be stored here. Use of dictionary gives flexibility to contents, leaves the door open to changing the iterator between iterations.
 """
@@ -22,10 +23,18 @@ ObjectiveType(m::ModelFormulation) = error("$(typeof(m)) should define an object
 
 abstract type AbstractObjective end
 
+#TODO make Qf a sparse type
 struct SparseQuadraticObjective{T} <: AbstractObjective
     Q::SparseMatrixCSC{T}
+    #Qf::SuiteSparse.CHOLMOD.Factor{T}
+    Qf::Cholesky{T}
     F::SparseVector{T}
-    SparseQuadraticObjective{T}(Q,F) where T = new(sparse(Q), sparse(F))
+    function SparseQuadraticObjective{T}(Q,F) where T
+        Qf = cholesky(Q)
+        Q = sparse(Q)
+        F = sparse(F)
+        return new(Q, Qf, F)
+    end
 end
 
 #TODO Add sparse vectors in Constraint entry
@@ -59,7 +68,7 @@ mutable struct RAMProblem{T}
     iterations::Int
     method::ModelFormulation
 
-    function RAMProblem{T}(model::String) where T
+    function RAMProblem{T}(model::String; kwargs...) where T
         p = new()
 
         #== Constraints ==#
@@ -71,7 +80,7 @@ mutable struct RAMProblem{T}
         p.termination_condition = RAM_OPTIMIZE_NOT_CALLED
         p.iterations = 0
 
-        p.method = method_mapping[model]{T}()
+        p.method = method_mapping[model]{T}(;kwargs...)
         return p 
     end
 end

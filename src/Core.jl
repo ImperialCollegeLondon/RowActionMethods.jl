@@ -1,11 +1,11 @@
 export GetModel, Setup, Build, Optimize
 
 #TODO this should have a return, and it seems like its use isn't consistent in MOI
-function GetModel(model::String)::RAMProblem
+function GetModel(model::String; kwargs...)::RAMProblem
     !haskey(method_mapping, model) && 
             throw(ArgumentError("Invalid row action method specified, valid" *
                                 " methods are: $(keys(RAM.method_mapping))"))
-    return RAMProblem{Float64}(model)
+    return RAMProblem{Float64}(model; kwargs...)
 end
 
 ObjectiveType(model::RAMProblem) = ObjectiveType(model.method)
@@ -26,6 +26,9 @@ Build(model::RAMProblem) = Build(model, model.method)
 
 GetObjective(model::RAMProblem) = GetObjective(model.objective)
 GetObjective(obj::SparseQuadraticObjective) = (obj.Q, obj.F)
+
+GetObjectiveFactorised(model::RAMProblem) = GetObjectiveFactorised(model.objective)
+GetObjectiveFactorised(obj::SparseQuadraticObjective) = (obj.Qf, obj.F)
 
 function Iterate(model::RAMProblem)
     args = [getproperty(model.method, sym) for sym in iterate_args(model.method)]
