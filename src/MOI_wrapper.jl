@@ -31,11 +31,11 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
                                   
         model.stopping_conditions = nothing
 
-        for (key, val) in kwargs
-            MOI.set(model, MOI.RawParameter(String(key)), val)
-        end
+        #for (key, val) in kwargs
+        #    MOI.set(model, MOI.RawParameter(String(key)), val)
+        #end
 
-        MOI.empty!(model)
+        MOI.empty!(model;kwargs...)
 
         return model
     end
@@ -78,8 +78,8 @@ function MOI.is_empty(model::Optimizer)::Bool
 end
 
 #= Model special set functions =#
-function MOI.empty!(model)
-    model.inner_model = GetModel(model.method)
+function MOI.empty!(model;kwargs...)
+    model.inner_model = GetModel(model.method;kwargs...)
     model.variable_count = 0
     model.constraints = []
 end
