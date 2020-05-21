@@ -55,7 +55,8 @@ Checks if any conditions with a MultipleStopCondition type are met.
 """
 function stopcondition(model::RAMProblem,
                        checks::MultipleStopCondition
-                      )#::Bool
+                      )::Bool
+    #=
     for c in checks.conditions
 		stop, status = stopcondition(model, c)
         if stop
@@ -63,6 +64,11 @@ function stopcondition(model::RAMProblem,
         end
     end
     return false, status
+    =#
+    for c in checks.conditions
+        stopcondition(model, c) && return true 
+    end
+    return false
 end
 
 """
@@ -72,8 +78,10 @@ Checks if the number of iterations has exceeded a maximum.
 """
 function stopcondition(model::RAMProblem, 
                        iterations_limit::SC_Iterations
-                      )#::Tuple(Bool,internal_termination_conditions)
-    return model.iterations >= iterations_limit.value, RAM_ITERATION_LIMIT
+                      #)::Tuple(Bool,internal_termination_conditions)
+                      )::Bool
+    #return model.iterations >= iterations_limit.value, RAM_ITERATION_LIMIT
+    return model.iterations >= iterations_limit.value
 end
 
 
@@ -89,10 +97,11 @@ not been implemented, then please update the wrapper accordingly.
 """
 function check_stopcondition!(model::RAMProblem,
                               conditions::StoppingCondition)::Bool
-    stop, status = stopcondition(model, conditions)
-	stop && set_termination_status!(model, status)
+    #stop, status = stopcondition(model, conditions)
+	#stop && set_termination_status!(model, status)
 
-	return stop
+	#return stop
+    return stopcondition(model, conditions)
 end
 
 

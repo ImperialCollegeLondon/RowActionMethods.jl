@@ -63,10 +63,15 @@ function Optimize(model::RAMProblem,
         Iterate(model)
         model.iterations += 1
     end
+    
+    #TODO set stopping condition here
+    #TODO have broken stopping conditions currently
 
 
     #Calculate solution
-   Resolve(model)
+    #TODO Maybe make this optional, in case the problem will be solved in increments and this
+    #doesn't always need to be done?
+    #Resolve(model)
 end
 
 

@@ -105,7 +105,10 @@ Treats the entire summation as a calculation of H_i * λ, then subtracts the
 contribution of the currently considered λ. 
 """
 function Iterate(model::RAMProblem, method::Hildreth)
-    z = method.z
+    #TODO proper performance analysis between two implementations,
+    #as well as confirming that both methods work correctly 
+    method.z .= max.(0, method.z-method.Δ'*method.z + method.b ./ diag(method.Δ))
+    #=
     for i in 1:method.n
         w = method.Δ[:,i]'*z
         w += method.b[i]
@@ -113,6 +116,7 @@ function Iterate(model::RAMProblem, method::Hildreth)
         w = z[i] - w
         method.z[i] = max(0,w)
     end
+    =#
 end
 
 function is_empty(method::RAMProblem, model::Hildreth)
@@ -161,7 +165,6 @@ Calculates the primal result after convergence is met with the equation:
 Where E_f is the factorised form of E in the problem statement, and λ is
 a working variable of the row action method.
 """
-resolve_args(::Hildreth) = [:A, :z]
 function Resolve(model::RAMProblem, method::Hildreth)
     method.x = -method.A'*method.z
 end
