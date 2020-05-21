@@ -30,25 +30,9 @@ GetObjective(obj::SparseQuadraticObjective) = (obj.Q, obj.F)
 GetObjectiveFactorised(model::RAMProblem) = GetObjectiveFactorised(model.objective)
 GetObjectiveFactorised(obj::SparseQuadraticObjective) = (obj.Qf, obj.F)
 
-function Iterate(model::RAMProblem)
-    args = [getproperty(model.method, sym) for sym in iterate_args(model.method)]
-    if length(args) > 0
-        Iterate(model, model.method, args...)
-    else
-        Iterate(model, model.method)
-    end
-end
+Iterate(model::RAMProblem) = Iterate(model, model.method)
 
-function Resolve(model::RAMProblem)
-    args = [getproperty(model.method, sym) for sym in resolve_args(model.method)]
-    if length(args) > 0
-        Resolve(model, model.method, args...)
-    else
-        Resolve(model, model.method)
-    end
-end
-
-
+Resolve(model::RAMProblem) = Resolve(model, model.method)
 
 """
     iterate_model!(model::ModelFormulation)

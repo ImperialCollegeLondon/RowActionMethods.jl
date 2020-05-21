@@ -104,12 +104,12 @@ Performs one iteration of the algorithm. Updates λ as it progresses.
 Treats the entire summation as a calculation of H_i * λ, then subtracts the 
 contribution of the currently considered λ. 
 """
-iterate_args(::Hildreth) = [:z, :Δ, :b, :n]
-function Iterate(model::RAMProblem, method::Hildreth, z, Δ, b, n)
-    for i in 1:n
-        w = Δ[:,i]'*z
-        w += b[i]
-        w /= Δ[i,i]
+function Iterate(model::RAMProblem, method::Hildreth)
+    z = method.z
+    for i in 1:method.n
+        w = method.Δ[:,i]'*z
+        w += method.b[i]
+        w /= method.Δ[i,i]
         w = z[i] - w
         method.z[i] = max(0,w)
     end
@@ -162,8 +162,8 @@ Where E_f is the factorised form of E in the problem statement, and λ is
 a working variable of the row action method.
 """
 resolve_args(::Hildreth) = [:A, :z]
-function Resolve(model::RAMProblem, method::Hildreth, A, z)
-    method.x = -A'*z
+function Resolve(model::RAMProblem, method::Hildreth)
+    method.x = -method.A'*method.z
 end
 
 function GetVariables(model::RAMProblem, method::Hildreth) 
