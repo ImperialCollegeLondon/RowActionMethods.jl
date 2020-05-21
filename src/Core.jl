@@ -92,6 +92,9 @@ get_termination_status(model::RAMProblem) = model.termination_condition
 ObjectiveValue(model::RAMProblem) = 
     ObjectiveValue(model, ObjectiveType(model.method))
 
+SupportsDeleteConstraint(model::RAMProblem) = SupportsDeleteConstraint(model.method)
+SupportsDeleteConstraint(::ModelFormulation) = false
+
 function ObjectiveValue(model::RAMProblem, ::Quadratic)
     B, d = GetObjective(model)
     x = GetVariables(model)

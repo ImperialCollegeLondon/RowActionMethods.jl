@@ -19,12 +19,14 @@ function AddConstraint(model::RAMProblem{T}, M_row::Vector{T}, lim::T)::Int wher
     
     #Ensures unique constraint index
     new_index = model.max_constraint_index + 1
-
-    push!(model.constraints, new_index => ConstraintEntry(M_row, lim))
-
+    #
     #Update largest index
     model.max_constraint_index = new_index
     model.constraint_count += 1
+
+    push!(model.constraints, new_index => ConstraintEntry(M_row, lim))
+    push!(model.constraint_indexes, new_index => model.constraint_count)
+
     return new_index
 end
 
@@ -118,12 +120,16 @@ Return the constraint matrix.
 (GetConstraintVector(model::RAMProblem{T})::Vector{T}) where T =
     [j.lim for j in values(model.constraints)]
 
-#TODO Add `reformulate` option to the model to indicate that the dual no longer represents the
-#constraints
+#TODO this needs thorough testing, not at all confident in it now
 function delete_constraint!(model::RAMProblem, con_index::Int)
+    RAM.SupportsDeleteConstraint(model) || error("Solver does not support constraint deletion")
     !haskey(model.constraints, con_index) && error("Invalid constraint identifier")
     delete!(model.constraints, con_index)
+    removed = model.constraint_index[con_index]
+    delete!(model.constraint_indexes, con_index)
+    map(x=>y -> y > removed ? x=>y-1 : x=>y, model.constraint_indexes)
     model.constraint_count -= 1
+    RAM.DeleteConstraint(model, removed)
 end
 
 function edit_constraint_coefficient!(model::RAMProblem, con_index::Int, var_index::Int, val::Float64)

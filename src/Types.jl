@@ -53,7 +53,9 @@ mutable struct RAMProblem{T}
     variable_count::Int
     
     #== Constraints ==#
-    #Maps constraint index var to constraint matrix/value
+    #Maps constraint index to actual vector index
+    constraint_indexes::Dict{Int, Int}
+    #Maps constraint index to constraint vector
     constraints::OrderedDict{Int,ConstraintEntry{T}}
     #Tracks largest constraint to ensure a unique new index
     max_constraint_index::Int
@@ -72,6 +74,7 @@ mutable struct RAMProblem{T}
         p = new()
 
         #== Constraints ==#
+        p.constraint_indexes = Dict{Int,Int}()
         p.constraints = OrderedDict{Int,ConstraintEntry{T}}()
         p.max_constraint_index = 0
         p.constraint_count = 0

@@ -48,7 +48,7 @@ end
 Builds the internal variables based on problem specification
 """
 function Build(model::RAMProblem, method::Hildreth)
-    G = GetconstraintMatrix(model)'
+    G = GetConstraintMatrix(model)
     h = GetConstraintVector(model)
 
     B, d = GetObjectiveFactorised(model)
@@ -68,6 +68,33 @@ function Build(model::RAMProblem, method::Hildreth)
     end
     method.x        = -method.A'method.z
 end
+
+SupportsDeleteConstraint(method::Hildreth) = true
+
+"""
+    ConstraintUpdate(model::RAMProblem, method::Hildreth, i::Int)
+
+Recalculate the internal variables `A`, `b`, and `Δ`. Also
+resize vectors `x` and `z`, but don't ovewrite existing variables.
+"""
+function DeleteConstraint(model::RAMProblem, method::Hildreth, i::Int)
+    G = GetconstraintMatrix(model)
+    h = GetConstraintVector(model)
+
+    B, d = GetObjectiveFactorised(model)
+
+    method.A = G/B.U
+    method.b = h + (G/B)d
+    method.Δ = (method.A * method.A')'
+
+    #TODO confirm that this is theoretically correct
+    deleteat!(method.z, i)
+    deleteat!(method.x, i)
+end
+
+
+#TODO adding constraints
+#TODO adding/removing variables (ie modifiying the objective)
 
 """
     Iterate(model::Hildreth)
