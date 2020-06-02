@@ -53,12 +53,12 @@ function Build(model::RAMProblem, method::Hildreth)
 
     B, d = GetObjectiveFactorised(model)
     
-    method.A        = G/B.U
-    method.b        = h + (G/B)d
+    method.A = G/B.U
+    method.b = h + (G/B)d
 
-    method.Δ        = (method.A * method.A')'
+    method.Δ = (method.A * method.A')'
 
-    method.n        = length(h)
+    method.n = length(h)
 
     #TODO adjust this range depending on input value
     if method.user_initial_point == nothing
@@ -66,7 +66,7 @@ function Build(model::RAMProblem, method::Hildreth)
     else
         method.z = method.user_initial_point
     end
-    method.x        = -method.A'method.z
+    method.x = -method.A'method.z
 end
 
 SupportsDeleteConstraint(method::Hildreth) = true
@@ -107,16 +107,16 @@ contribution of the currently considered λ.
 function Iterate(model::RAMProblem, method::Hildreth)
     #TODO proper performance analysis between two implementations,
     #as well as confirming that both methods work correctly 
-    method.z .= max.(0, method.z-method.Δ'*method.z + method.b ./ diag(method.Δ))
-    #=
+    #method.z .= max.(0, method.z-method.Δ'*method.z + method.b ./ diag(method.Δ))
+    #z = method.z
+    
     for i in 1:method.n
-        w = method.Δ[:,i]'*z
+        w = method.Δ[:,i]'*method.z
         w += method.b[i]
         w /= method.Δ[i,i]
-        w = z[i] - w
+        w = method.z[i] - w
         method.z[i] = max(0,w)
     end
-    =#
 end
 
 function is_empty(method::RAMProblem, model::Hildreth)
