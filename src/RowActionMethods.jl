@@ -22,7 +22,6 @@ export RAM
 include("./Types.jl")
 include("./StopConditions.jl")
 include("./MOI_wrapper.jl")
-include("./Benchmarks.jl")
 include("./Constraints.jl")
 include("./Core.jl")
 

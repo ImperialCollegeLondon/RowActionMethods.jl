@@ -12,9 +12,9 @@ viewing, or deleting the values. UID is based off the number of constraints
 that have ever been added, not the current number.
 """
 (AddConstraint(model::RAMProblem{T}, M_row::Vector, lim)::Int) where T =
-    AddConstraint(model, convert(Vector{T}, M_row), convert(T, lim))
+    AddConstraint(model, sparse(convert(Vector{T}, M_row)), convert(T, lim))
 
-function AddConstraint(model::RAMProblem{T}, M_row::Vector{T}, lim::T)::Int where T
+function AddConstraint(model::RAMProblem{T}, M_row::SparseVector{T}, lim::T)::Int where T
     !validconstraint(model, M_row, lim) && error("Invalid constraint, have you added an objective?")
     
     #Ensures unique constraint index
@@ -37,7 +37,7 @@ Return a bool to indicate if a constraint is currently valid for the model.
 
 Checks if the number of entries is equal to the number of registered variables.
 """
-function validconstraint(model::RAMProblem, row::Vector{T}, lim::T)::Bool where T
+function validconstraint(model::RAMProblem, row::SparseVector{T}, lim::T)::Bool where T
     return size(row)[1] == model.variable_count
 end
 
@@ -149,6 +149,6 @@ function is_model_empty(model::RAMProblem)
            model.variable_count == 0 &&
            model.max_constraint_index == 0 &&
            model.constraint_count == 0 &&
-           model.termination_condition == RAM_OPTIMIZE_NOT_CALLED &&
+           model.status == OPTIMIZE_NOT_CALLED() &&
            model.iterations == 0
 end

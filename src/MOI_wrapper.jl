@@ -228,15 +228,15 @@ end
 
 #Maps internal RAM termination conditions to MOI equivalents
 RAM_MOI_Termination_Map = Dict(
-RAM.RAM_OPTIMIZE_NOT_CALLED => MOI.OPTIMIZE_NOT_CALLED,
-RAM.RAM_OPTIMAL             => MOI.OPTIMAL,
-RAM.RAM_INFEASIBLE          => MOI.INFEASIBLE,
-RAM.RAM_ITERATION_LIMIT     => MOI.ITERATION_LIMIT,  
-RAM.RAM_TIME_LIMIT          => MOI.TIME_LIMIT
-)
+                               RAM.OPTIMIZE_NOT_CALLED() => MOI.OPTIMIZE_NOT_CALLED,
+                               RAM.OPTIMAL()             => MOI.OPTIMAL,
+                               RAM.INFEASIBLE()          => MOI.INFEASIBLE,
+                               RAM.ITERATION_LIMIT()     => MOI.ITERATION_LIMIT,  
+                               RAM.TIME_LIMIT()          => MOI.TIME_LIMIT
+                              )
 
 function MOI.get(model::Optimizer, ::MOI.TerminationStatus)
-    return RAM_MOI_Termination_Map[RAM.get_termination_status(model.inner_model)]
+    return RAM_MOI_Termination_Map[RAM.get_model_status(model.inner_model)]
 end
 
 function MOI.get(model::Optimizer, ::MOI.ObjectiveValue)

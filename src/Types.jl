@@ -37,16 +37,21 @@ struct SparseQuadraticObjective{T} <: AbstractObjective
     end
 end
 
-#TODO Add sparse vectors in Constraint entry
+
+#TODO build out type heirarchy
 mutable struct ConstraintEntry{T}
-    func::Vector{T}
+    func::SparseVector{T}
     lim::T
 end
 
-@enum(ram_termination_condition,
-RAM_OPTIMIZE_NOT_CALLED,
-RAM_OPTIMAL, RAM_INFEASIBLE,
-RAM_ITERATION_LIMIT, RAM_TIME_LIMIT)
+abstract type AbstractStatus end
+
+struct OPTIMIZE_NOT_CALLED              <: AbstractStatus end
+struct OPTIMAL                          <: AbstractStatus end
+struct INFEASIBLE                       <: AbstractStatus end
+struct ITERATION_LIMIT                  <: AbstractStatus end
+struct TIME_LIMIT                       <: AbstractStatus end
+struct UNKNOWN_TERMINATION_CONDITION    <: AbstractStatus end
 
 mutable struct RAMProblem{T}
     #== Variables ==#
@@ -64,11 +69,13 @@ mutable struct RAMProblem{T}
 
     #== Problem Description ==#
     objective::AbstractObjective
+    result::Union{SparseVector{T},Nothing}
 
     #== General ==#
-    termination_condition::ram_termination_condition
+    status::AbstractStatus
     iterations::Int
     method::ModelFormulation
+
 
     function RAMProblem{T}(model::String; kwargs...) where T
         p = new()
@@ -80,8 +87,9 @@ mutable struct RAMProblem{T}
         p.constraint_count = 0
 
         p.variable_count = 0
-        p.termination_condition = RAM_OPTIMIZE_NOT_CALLED
+        p.status = OPTIMIZE_NOT_CALLED()
         p.iterations = 0
+        p.result = nothing
 
         p.method = method_mapping[model]{T}(;kwargs...)
         return p 

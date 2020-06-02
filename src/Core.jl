@@ -34,49 +34,50 @@ Iterate(model::RAMProblem) = Iterate(model, model.method)
 
 Resolve(model::RAMProblem) = Resolve(model, model.method)
 
+function GetVariables(model::RAMProblem)
+    if model.result == nothing
+        model.result = GetVariables(model, model.method)
+    end
+    return model.result
+end
+
 """
     iterate_model!(model::ModelFormulation)
 
 Calls iterate_model!(model, condition) with a limit of 32 iterations.
 """
-function Optimize(model::RAMProblem)
-    conditions = get_SC(SC_Iterations(32)) 
-    Optimize(model, conditions)
-end
+Optimize(model::RAMProblem) = Optimize(model, [SC_Iterations(32)])
+
+Optimize(model::RAMProblem, s::StoppingCondition) = Optimize(model, [s])
 
 Optimize(model::RAMProblem, ::Nothing) = Optimize(model)
 
-GetVariables(model::RAMProblem) = GetVariables(model, model.method)
 
 """
-    iterate_model!(model::ModelFormulation, conditions::StoppingCondition)
+    Optimize(model::ModelFormulation, conditions::Vector{StoppingCondition})
 
 Repeatedly calls model's `iterate!` function until one of the cases
 specified in conditions is met. After the condition is met, the final result
 will be calculated and returned.
 """
-function Optimize(model::RAMProblem, 
-                        conditions::StoppingCondition
-                       )
+function Optimize(model::RAMProblem, conditions::Vector{S}) where {S<:StoppingCondition}
     #Run iterations until stop conditions are met
-    while !check_stopcondition!(model, conditions) 
+    while !check_stopcondition(model, conditions) 
         Iterate(model)
         model.iterations += 1
     end
-    
-    #TODO set stopping condition here
-    #TODO have broken stopping conditions currently
 
+    SetTerminationStatus(model, conditions)
 
     #Calculate solution
-    #TODO Maybe make this optional, in case the problem will be solved in increments and this
-    #doesn't always need to be done?
-    #Resolve(model)
+    #TODO Maybe make this optional, in case the problem will be solved in
+    #increments and this doesn't always need to be done?
+    Resolve(model)
 end
 
 
 is_empty(model::RAMProblem) = is_empty(model, model.method) && is_model_empty(model)
-get_termination_status(model::RAMProblem) = model.termination_condition
+get_model_status(model::RAMProblem) = model.status
 
 ObjectiveValue(model::RAMProblem) = 
     ObjectiveValue(model, ObjectiveType(model.method))
