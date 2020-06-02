@@ -53,6 +53,8 @@ function Build(model::RAMProblem, method::Hildreth)
 
     B, d = GetObjectiveFactorised(model)
     
+    #TODO possible to make these more efficient?
+    #currently the slowest part of the build process
     method.A = G/B.U
     method.b = h + (G/B)d
 

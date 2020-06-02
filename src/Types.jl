@@ -23,13 +23,16 @@ ObjectiveType(m::ModelFormulation) = error("$(typeof(m)) should define an object
 
 abstract type AbstractObjective end
 
-#TODO make Qf a sparse type
 struct SparseQuadraticObjective{T} <: AbstractObjective
     Q::SparseMatrixCSC{T}
     #Qf::SuiteSparse.CHOLMOD.Factor{T}
     Qf::Cholesky{T}
     F::SparseVector{T}
     function SparseQuadraticObjective{T}(Q,F) where T
+        #TODO this formulation needs to be changed
+        #currently Q must be dense, but this is memory
+        #inefficient and wasteful if sparse is provided 
+        #in the first place
         Qf = cholesky(Q)
         Q = sparse(Q)
         F = sparse(F)

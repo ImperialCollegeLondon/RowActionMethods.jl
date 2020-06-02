@@ -1,17 +1,6 @@
 export AddConstraint
 
-#TODO this should be reworked to contain the problem, rather than the problem containing this
-
-"""
-    setconstraint!(model::ModelFormulation, M_row::Vector{T}, lim::T) where T
-
-Adds a less-than constraint to the model.
-
-Returns a UID value that the solver can use to map to the value if modifying,
-viewing, or deleting the values. UID is based off the number of constraints
-that have ever been added, not the current number.
-"""
-(AddConstraint(model::RAMProblem{T}, M_row::Vector, lim)::Int) where T =
+(AddConstraint(model::RAMProblem{T}, M_row::Vector, lim::T)::Int) where T =
     AddConstraint(model, sparse(convert(Vector{T}, M_row)), convert(T, lim))
 
 function AddConstraint(model::RAMProblem{T}, M_row::SparseVector{T}, lim::T)::Int where T

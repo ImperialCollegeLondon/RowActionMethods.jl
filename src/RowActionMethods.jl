@@ -3,7 +3,6 @@ module RowActionMethods
 using DataStructures
 using SparseArrays
 
-#TODO Standardise notation between methods
 #=
 Author: Edward Stables 
 Date: 26-11-2019
@@ -33,8 +32,4 @@ include("./ExtendedHildreth.jl")
 method_mapping= Dict("Hildreth" => Hildreth,
                      "ExtendedHildreth" => ExtendedHildreth,
                     )
-function run_benchmarks()
-    run_all_benchmarks()
-end
-
 end # module
