@@ -106,12 +106,10 @@ Performs one iteration of the algorithm. Updates λ as it progresses.
 Treats the entire summation as a calculation of H_i * λ, then subtracts the 
 contribution of the currently considered λ. 
 """
-function Iterate(model::RAMProblem, method::Hildreth)
+function Iterate(method::Hildreth)
     #TODO proper performance analysis between two implementations,
     #as well as confirming that both methods work correctly 
     #method.z .= max.(0, method.z-method.Δ'*method.z + method.b ./ diag(method.Δ))
-    #z = method.z
-    
     for i in 1:method.n
         w = method.Δ[:,i]'*method.z
         w += method.b[i]
@@ -119,6 +117,14 @@ function Iterate(model::RAMProblem, method::Hildreth)
         w = method.z[i] - w
         method.z[i] = max(0,w)
     end
+end
+
+TempVarDimension(m::Hildreth) = m.n
+function VarUpdate(m::Hildreth{T}, v::Vector{T}) where T
+    m.z = v
+end
+function IterateRow(m::Hildreth{T}, i::Int, wv::Vector{T})::T where T
+    return max(convert(T,0), wv[i] - (m.Δ[:,i]'*wv + m.b[i])/m.Δ[i,i])
 end
 
 function is_empty(method::RAMProblem, model::Hildreth)

@@ -1,4 +1,4 @@
-export GetModel, Setup, Build, Optimize
+export GetModel, Setup, Build, Optimize, SetThreads, GetVariables, GetObjectiveValue
 
 #TODO this should have a return, and it seems like its use isn't consistent in MOI
 function GetModel(model::String; kwargs...)::RAMProblem
@@ -20,6 +20,10 @@ function Setup(model::RAMProblem{T}, Q::AbstractMatrix, F::AbstractVector) where
     end
 end
 
+function SetThreads(model::RAMProblem; threads::Bool=true)
+    model.threads = threads
+end
+
 Setup(method::ModelFormulation, model::RAMProblem, Q, F) = Setup(method, Q, F)
 
 Build(model::RAMProblem) = Build(model, model.method)
@@ -30,7 +34,7 @@ GetObjective(obj::SparseQuadraticObjective) = (obj.Q, obj.F)
 GetObjectiveFactorised(model::RAMProblem) = GetObjectiveFactorised(model.objective)
 GetObjectiveFactorised(obj::SparseQuadraticObjective) = (obj.Qf, obj.F)
 
-Iterate(model::RAMProblem) = Iterate(model, model.method)
+Iterate(model::RAMProblem) = Iterate(model.method)
 
 Resolve(model::RAMProblem) = Resolve(model, model.method)
 
@@ -60,11 +64,23 @@ Repeatedly calls model's `iterate!` function until one of the cases
 specified in conditions is met. After the condition is met, the final result
 will be calculated and returned.
 """
-function Optimize(model::RAMProblem, conditions::Vector{S}) where {S<:StoppingCondition}
+function Optimize(model::RAMProblem{T}, conditions::Vector{S}) where {T,S<:StoppingCondition}
     #Run iterations until stop conditions are met
-    while !check_stopcondition(model, conditions) 
-        Iterate(model)
-        model.iterations += 1
+    #TODO put in checks that the target algorithm supports threading
+    if !model.threads
+        while !check_stopcondition(model, conditions) 
+            Iterate(model)
+            model.iterations += 1
+        end
+    else
+        new_var = zeros(T, TempVarDimension(model))
+        while !check_stopcondition(model, conditions)
+            Threads.@threads for i in 1:length(new_var)
+                new_var[i] = IterateRow(model, i, new_var) 
+            end
+            model.iterations += 1
+        end
+        VarUpdate(model, new_var)
     end
 
     SetTerminationStatus(model, conditions)
@@ -79,13 +95,17 @@ end
 is_empty(model::RAMProblem) = is_empty(model, model.method) && is_model_empty(model)
 get_model_status(model::RAMProblem) = model.status
 
-ObjectiveValue(model::RAMProblem) = 
-    ObjectiveValue(model, ObjectiveType(model.method))
+GetObjectiveValue(model::RAMProblem) = 
+    GetObjectiveValue(model, ObjectiveType(model.method))
 
 SupportsDeleteConstraint(model::RAMProblem) = SupportsDeleteConstraint(model.method)
 SupportsDeleteConstraint(::ModelFormulation) = false
 
-function ObjectiveValue(model::RAMProblem, ::Quadratic)
+IterateRow(m::RAMProblem, i::Int, var::Vector{T}) where T = IterateRow(m.method, i, var)
+TempVarDimension(m::RAMProblem) = TempVarDimension(m.method)
+VarUpdate(m::RAMProblem{T}, var::Vector{T}) where T = VarUpdate(m.method, var)
+
+function GetObjectiveValue(model::RAMProblem, ::Quadratic)
     B, d = GetObjective(model)
     x = GetVariables(model)
 

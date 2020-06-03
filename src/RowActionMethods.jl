@@ -2,6 +2,7 @@ module RowActionMethods
 
 using DataStructures
 using SparseArrays
+using Base.Threads: @threads, nthreads
 
 #=
 Author: Edward Stables 

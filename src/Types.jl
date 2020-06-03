@@ -79,6 +79,9 @@ mutable struct RAMProblem{T}
     iterations::Int
     method::ModelFormulation
 
+    #== Threading ==#
+    threads::Bool
+
 
     function RAMProblem{T}(model::String; kwargs...) where T
         p = new()
@@ -93,6 +96,7 @@ mutable struct RAMProblem{T}
         p.status = OPTIMIZE_NOT_CALLED()
         p.iterations = 0
         p.result = nothing
+        p.threads = false
 
         p.method = method_mapping[model]{T}(;kwargs...)
         return p 
