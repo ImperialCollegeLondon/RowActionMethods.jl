@@ -17,6 +17,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     constraints::Vector{MOI.ConstraintIndex}
 
     stopping_conditions::Union{RAM.StoppingCondition, Nothing}
+    threads::Bool
 
     silent::Bool #True means nothing should be printed
 
@@ -31,6 +32,8 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
                                   
         model.stopping_conditions = nothing
 
+        model.threads = false
+
         #for (key, val) in kwargs
         #    MOI.set(model, MOI.RawParameter(String(key)), val)
         #end
@@ -42,7 +45,10 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
 end
 
 #= Model Actions =#
-MOI.optimize!(model::Optimizer) = RAM.Optimize(model.inner_model, model.stopping_conditions)
+function MOI.optimize!(model::Optimizer) = 
+    RAM.SetThreads(model.inner_model; threads = model.threads)
+    RAM.Optimize(model.inner_model, model.stopping_conditions)
+end
 
 #= Custom Options =#
 #TODO rethink this interface, especially for stopping conditions
@@ -52,7 +58,7 @@ function MOI.set(model::Optimizer, option::MOI.RawParameter, val)
     elseif option.name == "conditions"
         model.stopping_conditions = val
     elseif option.name == "threading"
-        RAM.SetThreads(model.inner_model; threads=val)
+        model.threads = val
     else
         error("Unsupported option $(option.name).")
     end
