@@ -54,6 +54,8 @@ function MOI.set(model::Optimizer, option::MOI.RawParameter, val)
         model.stopping_conditions = RAM.SC_Iterations(val)
     elseif option.name == "conditions"
         model.stopping_conditions = val
+    elseif option.name == "threading"
+        RAM.SetThreads(model.inner_model; threads=val)
     else
         error("Unsupported option $(option.name).")
     end
@@ -241,7 +243,7 @@ end
 
 function MOI.get(model::Optimizer, ::MOI.ObjectiveValue)
     sense = model.sense == MOI.MAX_SENSE ? -1 : 1
-    return sense * RAM.ObjectiveValue(model.inner_model)
+    return sense * RAM.GetObjectiveValue(model.inner_model)
 end
 
 function MOI.get(model::Optimizer, ::MOI.VariablePrimal, vi::MOI.VariableIndex)
