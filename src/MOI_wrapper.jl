@@ -45,7 +45,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
 end
 
 #= Model Actions =#
-function MOI.optimize!(model::Optimizer) = 
+function MOI.optimize!(model::Optimizer)
     RAM.SetThreads(model.inner_model; threads = model.threads)
     RAM.Optimize(model.inner_model, model.stopping_conditions)
 end
