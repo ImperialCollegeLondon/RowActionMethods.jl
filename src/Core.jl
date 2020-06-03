@@ -1,4 +1,4 @@
-export GetModel, Setup, Build, Optimize, SetThreads, GetVariables, GetObjectiveValue
+export GetModel, Setup, Optimize, SetThreads, GetVariables, GetObjectiveValue
 
 #TODO this should have a return, and it seems like its use isn't consistent in MOI
 function GetModel(model::String; kwargs...)::RAMProblem
@@ -26,7 +26,11 @@ end
 
 Setup(method::ModelFormulation, model::RAMProblem, Q, F) = Setup(method, Q, F)
 
-Build(model::RAMProblem) = Build(model, model.method)
+function RunBuild(model::RAMProblem) 
+    t1 = time()
+    Build(model, model.method)
+    model.statistics.BuildTime = time() - t1
+end
 
 GetObjective(model::RAMProblem) = GetObjective(model.objective)
 GetObjective(obj::SparseQuadraticObjective) = (obj.Q, obj.F)
@@ -65,8 +69,13 @@ specified in conditions is met. After the condition is met, the final result
 will be calculated and returned.
 """
 function Optimize(model::RAMProblem{T}, conditions::Vector{S}) where {T,S<:StoppingCondition}
+    
+    RunBuild(model)
+   
     #Run iterations until stop conditions are met
     #TODO put in checks that the target algorithm supports threading
+
+    t1 = time()
     if !model.threads
         while !check_stopcondition(model, conditions) 
             Iterate(model)
@@ -89,6 +98,7 @@ function Optimize(model::RAMProblem{T}, conditions::Vector{S}) where {T,S<:Stopp
     #TODO Maybe make this optional, in case the problem will be solved in
     #increments and this doesn't always need to be done?
     Resolve(model)
+    model.statistics.OptimizeTime = time() - t1;
 end
 
 

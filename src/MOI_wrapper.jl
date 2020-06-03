@@ -42,10 +42,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
 end
 
 #= Model Actions =#
-function MOI.optimize!(model::Optimizer)
-    RAM.Build(model.inner_model)
-    RAM.Optimize(model.inner_model, model.stopping_conditions)
-end
+MOI.optimize!(model::Optimizer) = RAM.Optimize(model.inner_model, model.stopping_conditions)
 
 #= Custom Options =#
 #TODO rethink this interface, especially for stopping conditions

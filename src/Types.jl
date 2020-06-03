@@ -40,6 +40,12 @@ struct SparseQuadraticObjective{T} <: AbstractObjective
     end
 end
 
+mutable struct Statistics{T}
+    BuildTime::T
+    OptimizeTime::T
+    Statistics{T}() where T = new(0.0, 0.0)
+end
+
 
 #TODO build out type heirarchy
 mutable struct ConstraintEntry{T}
@@ -81,7 +87,8 @@ mutable struct RAMProblem{T}
 
     #== Threading ==#
     threads::Bool
-
+    
+    statistics::Statistics{T}
 
     function RAMProblem{T}(model::String; kwargs...) where T
         p = new()
@@ -97,6 +104,8 @@ mutable struct RAMProblem{T}
         p.iterations = 0
         p.result = nothing
         p.threads = false
+
+        p.statistics = Statistics{T}()
 
         p.method = method_mapping[model]{T}(;kwargs...)
         return p 
