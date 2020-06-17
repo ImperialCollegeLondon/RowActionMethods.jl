@@ -62,19 +62,19 @@ struct ITERATION_LIMIT                  <: AbstractStatus end
 struct TIME_LIMIT                       <: AbstractStatus end
 struct UNKNOWN_TERMINATION_CONDITION    <: AbstractStatus end
 
-mutable struct RAMProblem{T}
+mutable struct RAMProblem{T,F}
     #== Variables ==#
-    variable_count::Int
+    variable_count::F
     
     #== Constraints ==#
     #Maps constraint index to actual vector index
-    constraint_indexes::Dict{Int, Int}
+    constraint_indexes::Dict{F, F}
     #Maps constraint index to constraint vector
-    constraints::OrderedDict{Int,ConstraintEntry{T}}
+    constraints::OrderedDict{F,ConstraintEntry{T}}
     #Tracks largest constraint to ensure a unique new index
-    max_constraint_index::Int
+    max_constraint_index::F
     #Track number of constraints
-    constraint_count::Int
+    constraint_count::F
 
     #== Problem Description ==#
     objective::AbstractObjective
@@ -82,7 +82,7 @@ mutable struct RAMProblem{T}
 
     #== General ==#
     status::AbstractStatus
-    iterations::Int
+    iterations::F
     method::ModelFormulation
 
     #== Threading ==#
@@ -90,12 +90,13 @@ mutable struct RAMProblem{T}
     
     statistics::Statistics{T}
 
-    function RAMProblem{T}(model::String; kwargs...) where T
+    RAMProblem(model::String; kwargs...) = RAMProblem{Float64, Int64}(model; kwargs...)
+    function RAMProblem{T,F}(model::String; kwargs...) where {T,F}
         p = new()
 
         #== Constraints ==#
-        p.constraint_indexes = Dict{Int,Int}()
-        p.constraints = OrderedDict{Int,ConstraintEntry{T}}()
+        p.constraint_indexes = Dict{F,F}()
+        p.constraints = OrderedDict{F,ConstraintEntry{T}}()
         p.max_constraint_index = 0
         p.constraint_count = 0
 

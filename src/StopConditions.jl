@@ -14,6 +14,7 @@ A stop condition that halts after 'num' iterations.
 struct SC_Iterations <: StoppingCondition
     value::Int64
 end
+
 StopConditionStatus(::SC_Iterations) = ITERATION_LIMIT()
 
 

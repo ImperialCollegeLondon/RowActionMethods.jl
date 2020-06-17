@@ -82,14 +82,15 @@ function Optimize(model::RAMProblem{T}, conditions::Vector{S}) where {T,S<:Stopp
             model.iterations += 1
         end
     else
-        new_var = zeros(T, TempVarDimension(model))
+        #set initial value to the same as that defined in the model
+        thread_var = convert(Vector{T}, GetTempVar(model))
         while !check_stopcondition(model, conditions)
-            Threads.@threads for i in 1:length(new_var)
-                new_var[i] = IterateRow(model, i, new_var) 
+            Threads.@threads for i in 1:length(thread_var)
+                thread_var[i] = IterateRow(model, i, thread_var) 
             end
             model.iterations += 1
+            VarUpdate(model, thread_var)
         end
-        VarUpdate(model, new_var)
     end
 
     SetTerminationStatus(model, conditions)
@@ -112,7 +113,7 @@ SupportsDeleteConstraint(model::RAMProblem) = SupportsDeleteConstraint(model.met
 SupportsDeleteConstraint(::ModelFormulation) = false
 
 IterateRow(m::RAMProblem, i::Int, var::Vector{T}) where T = IterateRow(m.method, i, var)
-TempVarDimension(m::RAMProblem) = TempVarDimension(m.method)
+GetTempVar(m::RAMProblem) = GetTempVar(m.method)
 VarUpdate(m::RAMProblem{T}, var::Vector{T}) where T = VarUpdate(m.method, var)
 
 function GetObjectiveValue(model::RAMProblem, ::Quadratic)

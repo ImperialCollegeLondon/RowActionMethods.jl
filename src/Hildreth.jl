@@ -1,5 +1,6 @@
 import Base.==
 export Hildreth, SC_HildrethConvergence
+using Distributions
 
 """
     Hildreth(E, F, M, γ, H K, ucSoln, Soln, E_fact, workingvars, options)
@@ -64,7 +65,7 @@ function Build(model::RAMProblem, method::Hildreth)
 
     #TODO adjust this range depending on input value
     if method.user_initial_point == nothing
-        method.z = rand(0.1:0.1:10.0, method.n)
+        method.z = rand(Uniform(0,10), method.n)
     else
         method.z = method.user_initial_point
     end
@@ -119,7 +120,9 @@ function Iterate(method::Hildreth)
     end
 end
 
-TempVarDimension(m::Hildreth) = m.n
+
+GetTempVar(m::Hildreth) = m.z
+
 function VarUpdate(m::Hildreth{T}, v::Vector{T}) where T
     m.z = v
 end
