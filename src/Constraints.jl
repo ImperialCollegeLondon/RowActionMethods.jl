@@ -5,18 +5,49 @@ export AddConstraint
 
 function AddConstraint(model::RAMProblem{T}, M_row::SparseVector{T}, lim::T)::Int where T
     !validconstraint(model, M_row, lim) && error("Invalid constraint, have you added an objective?")
+    c = model.constraints
     
-    #Ensures unique constraint index
-    new_index = model.max_constraint_index + 1
-    #
-    #Update largest index
-    model.max_constraint_index = new_index
-    model.constraint_count += 1
+    if c.constraint_count == 0
+        c.Functions = M_row
+        c.Limits = sparse([lim])
+    else
+        c.Functions = hcat(c.Functions, M_row)
+        c.Limits = vcat(c.Limits, lim)
+    end
 
-    push!(model.constraints, new_index => ConstraintEntry(M_row, lim))
-    push!(model.constraint_indexes, new_index => model.constraint_count)
+    c.constraint_count += 1
+
+    #Ensures unique constraint index
+    new_index = c.max_constraint_index + 1
+
+    #Update largest index
+    c.constraint_indexes[new_index] = c.constraint_count
 
     return new_index
+end
+
+"""
+    GetConstraintMatrix(model::RAMProblem{T})::Matrix{T} where T
+
+Return the constraint matrix.
+"""
+(GetConstraintMatrixTransposed(model::RAMProblem{T})::SparseMatrixCSC{T}) where T = 
+    model.constraints.Functions
+
+(GetConstraintVector(model::RAMProblem{T})::SparseVector{T}) where T = 
+    model.constraints.Limits
+
+#TODO parametric type
+function is_model_empty(model::RAMProblem)
+    return ((!isdefined(model.constraints, :Functions) &&
+             !isdefined(model.constraints, :Limits)) || 
+            (isempty(model.constraints.Functions) &&
+             isempty(model.constraints.Limits))) &&
+           model.variable_count == 0 &&
+           model.constraints.max_constraint_index == 0 &&
+           model.constraints.constraint_count == 0 &&
+           model.status == OPTIMIZE_NOT_CALLED() &&
+           model.iterations == 0
 end
 
 """
@@ -29,6 +60,9 @@ Checks if the number of entries is equal to the number of registered variables.
 function validconstraint(model::RAMProblem, row::SparseVector{T}, lim::T)::Bool where T
     return size(row)[1] == model.variable_count
 end
+
+#TODO all functions below are now broken
+#=
 
 """
     extendcontraints(model::ModelFormulation)
@@ -59,8 +93,6 @@ function shrinkconstraints(model::RAMProblem, index::Int)
     filter!(c -> !check_emptyconstraint(c.second), model.constraints)
 end
 
-#TODO: Move to a more appropriate place
-#TODO: This will likely improve when moving to sparse matrices.
 """
     delete_variable!(model::ModelFormulation, index::Int)
 
@@ -98,16 +130,6 @@ function check_emptyconstraint(con::ConstraintEntry)::Bool
     return true
 end
 
-"""
-    GetConstraintMatrix(model::RAMProblem{T})::Matrix{T} where T
-
-Return the constraint matrix.
-"""
-(GetConstraintMatrix(model::RAMProblem{T})::Matrix{T}) where T = 
-    reduce(hcat, [j.func for j in values(model.constraints)])'
-
-(GetConstraintVector(model::RAMProblem{T})::Vector{T}) where T =
-    [j.lim for j in values(model.constraints)]
 
 #TODO this needs thorough testing, not at all confident in it now
 function delete_constraint!(model::RAMProblem, con_index::Int)
@@ -131,13 +153,4 @@ function edit_constraint_constant!(model::RAMProblem, con_index::Int, val::Float
     !haskey(model.constraints, con_index) && error("Invalid constraint identifier")
     model.constraints[con_index].lim = val
 end
-
-#TODO parametric type
-function is_model_empty(model::RAMProblem)
-    return model.constraints == OrderedDict{Int,ConstraintEntry{Float64}}() &&
-           model.variable_count == 0 &&
-           model.max_constraint_index == 0 &&
-           model.constraint_count == 0 &&
-           model.status == OPTIMIZE_NOT_CALLED() &&
-           model.iterations == 0
-end
+=#

@@ -47,10 +47,39 @@ mutable struct Statistics{T}
 end
 
 
-#TODO build out type heirarchy
-mutable struct ConstraintEntry{T}
-    func::SparseVector{T}
-    lim::T
+"""
+    Constraints{T}
+
+Store the matrix and variable that defines the problem constraints.
+
+Note that the `Functions` entry (that stores the matrix) stores a 
+transposed form. I.e. for the standard linear constraint formulation:
+
+``Qx≤b``
+
+The matrix ``Q^T``  and the vector ``b`` are stored. This is due to Julia being able
+to more efficiently concatenate columns than rows (even for sparse storage).
+"""
+mutable struct Constraints{T,F}
+    Functions::SparseMatrixCSC{T}
+    Limits::SparseVector{T}
+ 
+    #Maps constraint index to actual vector index
+    constraint_indexes::Dict{F, F}
+    
+    #Tracks largest constraint to ensure a unique new index
+    max_constraint_index::F
+    #Track number of constraints
+    constraint_count::F
+
+    Constraints() = Constraints{Float64,Int64}()
+    function Constraints{T,F}() where {T,F}
+        c = new()
+        c.constraint_indexes = Dict{F,F}()
+        c.max_constraint_index = 0
+        c.constraint_count = 0
+        return c
+    end
 end
 
 abstract type AbstractStatus end
@@ -67,14 +96,7 @@ mutable struct RAMProblem{T,F}
     variable_count::F
     
     #== Constraints ==#
-    #Maps constraint index to actual vector index
-    constraint_indexes::Dict{F, F}
-    #Maps constraint index to constraint vector
-    constraints::OrderedDict{F,ConstraintEntry{T}}
-    #Tracks largest constraint to ensure a unique new index
-    max_constraint_index::F
-    #Track number of constraints
-    constraint_count::F
+    constraints::Constraints{T,F}
 
     #== Problem Description ==#
     objective::AbstractObjective
@@ -95,10 +117,7 @@ mutable struct RAMProblem{T,F}
         p = new()
 
         #== Constraints ==#
-        p.constraint_indexes = Dict{F,F}()
-        p.constraints = OrderedDict{F,ConstraintEntry{T}}()
-        p.max_constraint_index = 0
-        p.constraint_count = 0
+        p.constraints = Constraints{T,F}()
 
         p.variable_count = 0
         p.status = OPTIMIZE_NOT_CALLED()

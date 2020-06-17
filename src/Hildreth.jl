@@ -49,13 +49,15 @@ end
 Builds the internal variables based on problem specification
 """
 function Build(model::RAMProblem, method::Hildreth)
-    G = GetConstraintMatrix(model)
+    #Need G to be dense 
+    G = Matrix(GetConstraintMatrixTransposed(model)')
     h = GetConstraintVector(model)
 
     B, d = GetObjectiveFactorised(model)
     
     #TODO possible to make these more efficient?
     #currently the slowest part of the build process
+
     method.A = G/B.U
     method.b = h + (G/B)d
 

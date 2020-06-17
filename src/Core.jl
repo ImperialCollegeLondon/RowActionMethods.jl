@@ -5,7 +5,7 @@ function GetModel(model::String; kwargs...)::RAMProblem
     !haskey(method_mapping, model) && 
             throw(ArgumentError("Invalid row action method specified, valid" *
                                 " methods are: $(keys(RAM.method_mapping))"))
-    return RAMProblem{Float64}(model; kwargs...)
+    return RAMProblem(model; kwargs...)
 end
 
 ObjectiveType(model::RAMProblem) = ObjectiveType(model.method)
