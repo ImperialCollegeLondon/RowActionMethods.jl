@@ -1,4 +1,4 @@
-export SC_Iterations
+export IterationStop, TimeStop
 
 """
 All stopping conditions take a condition that extends the StoppingCondition
@@ -6,28 +6,15 @@ abstract type.
 """
 abstract type StoppingCondition end
 
-"""
-    SC_Iterations(num)
+SetTerminationStatus(m::RAMProblem, c::StoppingCondition) = SetTerminationCondition(m, [c])
 
-A stop condition that halts after 'num' iterations.
-"""
-struct SC_Iterations <: StoppingCondition
-    value::Int64
+function SetTerminationStatus(model::RAMProblem, conditions::Vector{S}) where {S<:StoppingCondition}
+    for c in conditions
+        !stopcondition(model, c) && continue 
+        model.status = StopConditionStatus(c)
+        break
+    end
 end
-
-StopConditionStatus(::SC_Iterations) = ITERATION_LIMIT()
-
-
-
-"""
-    stopcondition(v::WorkingVars, iterations_limit::SC_Iterations)
-
-Checks if the number of iterations has exceeded a maximum.
-"""
-function stopcondition(model::RAMProblem, iterations_limit::SC_Iterations)::Bool
-    return model.iterations >= iterations_limit.value
-end
-
 
 """
     check_stopcondition!(model::ModelFormulation, conditions::StoppingCondition)::Bool
@@ -47,12 +34,51 @@ function check_stopcondition(model::RAMProblem,
     return false
 end
 
-SetTerminationStatus(m::RAMProblem, c::StoppingCondition) = SetTerminationCondition(m, [c])
+"""
+    IterationStop(num)
 
-function SetTerminationStatus(model::RAMProblem, conditions::Vector{S}) where {S<:StoppingCondition}
-    for c in conditions
-        !stopcondition(model, c) && continue 
-        model.status = StopConditionStatus(c)
-        break
+A stop condition that halts after 'num' iterations.
+"""
+struct IterationStop <: StoppingCondition
+    value::Int64
+end
+
+StopConditionStatus(::IterationStop) = ITERATION_LIMIT()
+
+
+
+"""
+    stopcondition(v::WorkingVars, iterations_limit::IterationStop)
+
+Checks if the number of iterations has exceeded a maximum.
+"""
+function stopcondition(model::RAMProblem, iterations_limit::IterationStop)::Bool
+    return model.iterations >= iterations_limit.value
+end
+
+mutable struct TimeStop <: StoppingCondition
+    running::Bool
+    start::Int64
+    limit::Int64
+    function TimeStop(limit::Int64)
+        t = new()
+        t.running = false
+        t.limit = limit
+        return t
     end
+end
+
+function stopcondition(model::RAMProblem, time_limit::TimeStop)
+    #Start condition if first time
+    if time_limit.running == false
+        time_limit.running = true
+        time_limit.start = floor(time())
+        return false
+    end
+    
+    #Otherwise check if elapsed time is greater than limit
+    @show Int(floor(time()))
+    @show time_limit.start
+    @show time_limit.limit
+    return floor(time()) - time_limit.start > time_limit.limit
 end

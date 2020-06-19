@@ -54,7 +54,7 @@ end
 
 Calls iterate_model!(model, condition) with a limit of 32 iterations.
 """
-Optimize(model::RAMProblem) = Optimize(model, [SC_Iterations(32)])
+Optimize(model::RAMProblem) = Optimize(model, [IterationStop(32)])
 
 Optimize(model::RAMProblem, s::StoppingCondition) = Optimize(model, [s])
 
