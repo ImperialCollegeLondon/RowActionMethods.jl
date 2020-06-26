@@ -26,8 +26,9 @@ Note that the termination variables should be mapped to the MathOptInterface ter
 status codes in MOI_wrapper.jl. If your stopping condition fits an MOI condition that has
 not been implemented, then please update the wrapper accordingly.
 """
-function check_stopcondition(model::RAMProblem,
-                             conditions::Vector{S})::Bool where {S<:StoppingCondition}
+function check_stopcondition(model::RAMProblem, conditions::Vector{S}
+                            )::Bool where {S<:StoppingCondition}
+    
     for c in conditions
         stopcondition(model, c) && return true
     end
@@ -77,8 +78,5 @@ function stopcondition(model::RAMProblem, time_limit::TimeStop)
     end
     
     #Otherwise check if elapsed time is greater than limit
-    @show Int(floor(time()))
-    @show time_limit.start
-    @show time_limit.limit
     return floor(time()) - time_limit.start > time_limit.limit
 end
