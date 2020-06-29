@@ -43,9 +43,11 @@ println("x[3]: ", JuMP.value(x[3]))
 The API also offers more flexibility in stopping conditions. However these are not currently implemented when using JuMP, this will be coming shortly.
 
 ## Installation
-Clone this git repository and activate it as your current environment in Julia's REPL, e.g. if your terminal is in the directory the repository was cloned to `using Pkg; Pkg.activate("./RowActionMethods.jl")`.
+```
+using Pkg
+Pkg.add("https://github.com/ImperialCollegeLondon/RowActionMethods.jl.git")
+```
 
-Normal installation with `Pkg` will hopefully come in time.
 
 ## Known Limitations/Issues/Workarounds
 - MathOptInterface's method for adding constrained variables is incompatible with this package. To constrain a variable, declare it and then add a specific constraint.
