@@ -1,3 +1,7 @@
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://imperialcollegelondon.github.io/RowActionMethods.jl/dev)
+![](https://github.com/ImperialCollegeLondon/RowActionMethods.jl/workflows/CI/badge.svg)
+[![codecov](https://codecov.io/gh/ImperialCollegeLondon/RowActionMethods.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/ImperialCollegeLondon/RowActionMethods.jl)
+
 # Julia Row Action Optimization Solvers
 
 This package contains a number of solvers defined as row-action methods. They share a common API, but each method will have specific problem features it benefits from over others. 
