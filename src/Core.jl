@@ -1,6 +1,5 @@
 export GetModel, Setup, Optimize, SetThreads, GetVariables, GetObjectiveValue
 
-#TODO this should have a return, and it seems like its use isn't consistent in MOI
 function GetModel(model::String; kwargs...)::RAMProblem
     !haskey(method_mapping, model) && 
             throw(ArgumentError("Invalid row action method specified, valid" *
