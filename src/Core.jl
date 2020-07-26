@@ -1,71 +1,151 @@
 export GetModel, Setup, Optimize, SetThreads, GetVariables, GetObjectiveValue
 
-function GetModel(model::String; kwargs...)::RAMProblem
-    !haskey(method_mapping, model) && 
+"""
+    GetModel(model::String; kwargs...)::RAMProblem
+
+Return problem definition configured with the specified method.
+
+kwargs are passed directly to the method's constructor, see the method for 
+documentation on available options.
+
+This function queries `RAM.method_mapping` to find valid methods.
+"""
+function GetModel(method::String; kwargs...)::RAMProblem
+    !haskey(method_mapping, method) && 
             throw(ArgumentError("Invalid row action method specified, valid" *
                                 " methods are: $(keys(RAM.method_mapping))"))
-    return RAMProblem(model; kwargs...)
+    return RAMProblem(method; kwargs...)
 end
 
 ObjectiveType(model::RAMProblem) = ObjectiveType(model.method)
 
-#TODO generalise to other objectives (input vars, and option in else/if)
-function Setup(model::RAMProblem{T}, Q::AbstractMatrix, F::AbstractVector) where T
-    if ObjectiveType(model.method) == Quadratic()
-        model.objective = SparseQuadraticObjective{T}(Q,F)
-        model.variable_count = length(F)
-    else 
-        error("Unsupported objective type")
-    end
-end
+"""
+    SetThreads(model::RAMProblem; threads::Bool=true)
 
+Enable/disable threading for `model`.
+
+This only has an effect if the method used by `model` has implemented 
+a threaded variation of its algorithm.
+
+Julia will set the number of threads to that defined by the
+`JULIA_NUM_THREADS` environment variable.
+"""
 function SetThreads(model::RAMProblem; threads::Bool=true)
     model.threads = threads
 end
 
-Setup(method::ModelFormulation, model::RAMProblem, Q, F) = Setup(method, Q, F)
+"""
+    GetObjective(model::RAMProblem)::Tuple
 
+Return the components of the objective function set for `model`. This function
+is implemented for each of the objective types.
+"""
+GetObjective(model::RAMProblem)::Tuple = GetObjective(model.objective)
+
+"""
+    GetObjective(obj::SparseQuadraticObjective)::Tuple
+
+Return the `Q` matrix and `F` vector of the objective.
+"""
+GetObjective(obj::SparseQuadraticObjective)::Tuple = (obj.Q, obj.F)
+
+"""
+    GetObjectiveFactorised(model::RAMProblem)::Tuple
+
+As `GetObjective` but for factorised matrices.
+"""
+GetObjectiveFactorised(model::RAMProblem)::Tuple = GetObjectiveFactorised(model.objective)
+
+"""
+    GetObjectiveFactorised(obj::SparseQuadraticObjective)::Tuple
+
+Return the factorised `Q` matrix (Cholseky)and `F` vector of the objective. Note that
+the factorised `Q` matrix is not sparse.
+"""
+GetObjectiveFactorised(obj::SparseQuadraticObjective)::Tuple = (obj.Qf, obj.F)
+
+"""
+    is_empty(model::RAMProblem)::Bool
+
+Return true if a model has not had any parameters set.
+"""
+is_empty(model::RAMProblem)::Bool = is_empty(model, model.method) && is_model_empty(model)
+
+"""
+    get_model_status(model::RAMProblem)
+
+Getter function for `model.status`.
+"""
+get_model_status(model::RAMProblem) = model.status
+
+#Modification defaults
+SupportsDeleteConstraint(model::RAMProblem) = SupportsDeleteConstraint(model.method)
+SupportsDeleteConstraint(::ModelFormulation) = false
+
+#Threaded function defaults
+IterateRow(m::RAMProblem, i::Int, var::Vector{T}) where T = IterateRow(m.method, i, var)
+GetTempVar(m::RAMProblem) = GetTempVar(m.method)
+VarUpdate(m::RAMProblem{T}, var::Vector{T}) where T = VarUpdate(m.method, var)
+
+"""
+    GetObjectiveValue(model::RAMProblem{T,F})::T
+    
+Return the evaluated objective for the current solution.
+"""
+GetObjectiveValue(model::RAMProblem{T,F})::T =
+    GetObjectiveValue(model, ObjectiveType(model.method))
+
+
+"""
+    GetObjectiveValue(model::RAMProblem, ::Quadratic)
+
+Evaluate the cost of the objective function for a quadratic objective.
+"""
+function GetObjectiveValue(model::RAMProblem, ::Quadratic)
+    B, d = GetObjective(model)
+    x = GetVariables(model)
+
+    return 0.5*x'*B*x + x'*d
+end
+
+SetObjective(model::RAMProblem{T}, args...) = 
+    SetObjective(model, ObjectiveType(model.method), args...)
+
+"""
+    SetObjective(model::RAMProblem{T}, ::Quadratic, Q::AbstractMatrix, F::AbstractVector) where T
+
+Set the objective of `model` as a quadratic type.
+"""
+function SetObjective(model::RAMProblem{T}, ::Quadratic, Q::AbstractMatrix, F::AbstractVector) where T
+    model.objective = SparseQuadraticObjective{T}(Q,F)
+    model.variable_count = length(F)
+end
+
+#Build wrapper to set timings
 function RunBuild(model::RAMProblem) 
     t1 = time()
     Build(model, model.method)
     model.statistics.BuildTime = time() - t1
 end
 
-GetObjective(model::RAMProblem) = GetObjective(model.objective)
-GetObjective(obj::SparseQuadraticObjective) = (obj.Q, obj.F)
+Optimize(model::RAMProblem, ::Nothing) = Optimize(model)
 
-GetObjectiveFactorised(model::RAMProblem) = GetObjectiveFactorised(model.objective)
-GetObjectiveFactorised(obj::SparseQuadraticObjective) = (obj.Qf, obj.F)
-
-Iterate(model::RAMProblem) = Iterate(model.method)
-
-Resolve(model::RAMProblem) = Resolve(model, model.method)
-
-function GetVariables(model::RAMProblem)
-    if model.result == nothing
-        model.result = GetVariables(model, model.method)
-    end
-    return model.result
-end
-
-"""
-    iterate_model!(model::ModelFormulation)
-
-Calls iterate_model!(model, condition) with a limit of 32 iterations.
-"""
 Optimize(model::RAMProblem) = Optimize(model, [IterationStop(32)])
 
 Optimize(model::RAMProblem, s::StoppingCondition) = Optimize(model, [s])
 
-Optimize(model::RAMProblem, ::Nothing) = Optimize(model)
-
-
 """
     Optimize(model::ModelFormulation, conditions::Vector{StoppingCondition})
 
-Repeatedly calls model's `iterate!` function until one of the cases
-specified in conditions is met. After the condition is met, the final result
-will be calculated and returned.
+Iterate `model.method` algorithm until a stopping condition has been met, then
+set the termination status and calculate the primal solution.
+
+If configured as single threaded, `Iterate` is called on `model`, with each call
+to `Iterate` counting as a single iteration.
+
+If configured as multi threaded then `IterateRow` is called for each index in the
+variable returned by `GetTempVar`. Calls to `IterateRow` are distributed amongst all
+available threads.
 """
 function Optimize(model::RAMProblem{T}, conditions::Vector{S}) where {T,S<:StoppingCondition}
     
@@ -101,24 +181,18 @@ function Optimize(model::RAMProblem{T}, conditions::Vector{S}) where {T,S<:Stopp
     model.statistics.OptimizeTime = time() - t1;
 end
 
+#Wrapper
+Iterate(model::RAMProblem) = Iterate(model.method)
 
-is_empty(model::RAMProblem) = is_empty(model, model.method) && is_model_empty(model)
-get_model_status(model::RAMProblem) = model.status
+#Wrapper
+Resolve(model::RAMProblem) = Resolve(model, model.method)
 
-GetObjectiveValue(model::RAMProblem) = 
-    GetObjectiveValue(model, ObjectiveType(model.method))
-
-SupportsDeleteConstraint(model::RAMProblem) = SupportsDeleteConstraint(model.method)
-SupportsDeleteConstraint(::ModelFormulation) = false
-
-IterateRow(m::RAMProblem, i::Int, var::Vector{T}) where T = IterateRow(m.method, i, var)
-GetTempVar(m::RAMProblem) = GetTempVar(m.method)
-VarUpdate(m::RAMProblem{T}, var::Vector{T}) where T = VarUpdate(m.method, var)
-
-function GetObjectiveValue(model::RAMProblem, ::Quadratic)
-    B, d = GetObjective(model)
-    x = GetVariables(model)
-
-    return 0.5*x'*B*x + x'*d
+#Wrapper
+function GetVariables(model::RAMProblem)
+    if model.result == nothing
+        model.result = GetVariables(model, model.method)
+    end
+    return model.result
 end
+
 
