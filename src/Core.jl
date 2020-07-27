@@ -1,4 +1,4 @@
-export GetModel, Setup, Optimize, SetThreads, GetVariables, GetObjectiveValue
+export GetModel, Optimize, SetThreads, GetVariables, GetObjectiveValue
 
 """
     GetModel(model::String; kwargs...)::RAMProblem
@@ -92,7 +92,7 @@ VarUpdate(m::RAMProblem{T}, var::Vector{T}) where T = VarUpdate(m.method, var)
     
 Return the evaluated objective for the current solution.
 """
-GetObjectiveValue(model::RAMProblem{T,F})::T =
+(GetObjectiveValue(model::RAMProblem{T,F})::T) where {T,F}=
     GetObjectiveValue(model, ObjectiveType(model.method))
 
 
@@ -108,7 +108,7 @@ function GetObjectiveValue(model::RAMProblem, ::Quadratic)
     return 0.5*x'*B*x + x'*d
 end
 
-SetObjective(model::RAMProblem{T}, args...) = 
+SetObjective(model::RAMProblem, args...) = 
     SetObjective(model, ObjectiveType(model.method), args...)
 
 """
@@ -116,9 +116,9 @@ SetObjective(model::RAMProblem{T}, args...) =
 
 Set the objective of `model` as a quadratic type.
 """
-function SetObjective(model::RAMProblem{T}, ::Quadratic, Q::AbstractMatrix, F::AbstractVector) where T
-    model.objective = SparseQuadraticObjective{T}(Q,F)
-    model.variable_count = length(F)
+function SetObjective(model::RAMProblem{T,F}, ::Quadratic, Q::AbstractMatrix, V::AbstractVector) where {T,F}
+    model.objective = SparseQuadraticObjective{T}(Q,V)
+    model.variable_count = length(V)
 end
 
 #Build wrapper to set timings
@@ -130,12 +130,8 @@ end
 
 Optimize(model::RAMProblem, ::Nothing) = Optimize(model)
 
-Optimize(model::RAMProblem) = Optimize(model, [IterationStop(32)])
-
-Optimize(model::RAMProblem, s::StoppingCondition) = Optimize(model, [s])
-
 """
-    Optimize(model::ModelFormulation, conditions::Vector{StoppingCondition})
+    Optimize(model::RAMProblem)
 
 Iterate `model.method` algorithm until a stopping condition has been met, then
 set the termination status and calculate the primal solution.
@@ -146,8 +142,25 @@ to `Iterate` counting as a single iteration.
 If configured as multi threaded then `IterateRow` is called for each index in the
 variable returned by `GetTempVar`. Calls to `IterateRow` are distributed amongst all
 available threads.
+
+Configures the algorithm to terminate after 32 iterations.
 """
-function Optimize(model::RAMProblem{T}, conditions::Vector{S}) where {T,S<:StoppingCondition}
+Optimize(model::RAMProblem) = Optimize(model, [IterationStop(32)])
+
+"""
+    Optimize(model::RAMProblem, s::StoppingCondition)
+
+As [`Optimize`](@ref Optimize(::RAM.RAMProblem)) but takes a single stopping condition to end on rather than
+the default.
+"""
+Optimize(model::RAMProblem, s::StoppingCondition) = Optimize(model, [s])
+
+"""
+    Optimize(model::RAMProblem{T,F}, conditions::Vector{S}) where {T,F,S<:StoppingCondition}
+
+As [`Optimize`](@ref Optimize(::RAM.RAMProblem)) but takes a vector of single stopping conditions to end on. 
+"""
+function Optimize(model::RAMProblem{T,F}, conditions::Vector{S}) where {T,F,S<:StoppingCondition}
     
     RunBuild(model)
    
