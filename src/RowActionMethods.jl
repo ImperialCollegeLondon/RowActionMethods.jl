@@ -1,18 +1,9 @@
 module RowActionMethods
 
+using SuiteSparse
 using DataStructures
 using SparseArrays
 using Base.Threads: @threads, nthreads
-
-#=
-Author: Edward Stables 
-Date: 26-11-2019
-
-For solving QP problems of the form:
-Minimize: J = 1/2(x'Ex) + F'x
-Subject to the constraints: Mx <= γ
-=#
-
 using LinearAlgebra
 using Logging
 

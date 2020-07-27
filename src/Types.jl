@@ -1,4 +1,3 @@
-using SuiteSparse
 """
 All variables used in the actual computation should be stored here. Use of dictionary gives flexibility to contents, leaves the door open to changing the iterator between iterations.
 """
