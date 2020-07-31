@@ -1,6 +1,6 @@
 export AddConstraint
 
-(AddConstraint(model::RAMProblem{T}, M_row::Vector, lim::T)::Int) where T =
+(AddConstraint(model::RAMProblem{T}, M_row::Vector, lim::Number)::Int) where T =
     AddConstraint(model, sparse(convert(Vector{T}, M_row)), convert(T, lim))
 
 function AddConstraint(model::RAMProblem{T}, M_row::SparseVector{T}, lim::T)::Int where T
