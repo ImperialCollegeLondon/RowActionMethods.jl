@@ -80,3 +80,5 @@ function stopcondition(model::RAMProblem, time_limit::TimeStop)
     #Otherwise check if elapsed time is greater than limit
     return floor(time()) - time_limit.start > time_limit.limit
 end
+
+StopConditionStatus(::TimeStop) = TIME_LIMIT()
