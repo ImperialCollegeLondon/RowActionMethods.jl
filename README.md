@@ -4,21 +4,26 @@
 
 # Julia Row Action Optimization Solvers
 
-This package contains a number of solvers defined as row-action methods. They share a common API, but each method will have specific problem features it benefits from over others. 
+This package provides a common framework for the implementation of Row Action Methods. This class of algorithms is suited to large and sparse problems. Currently only Hildreth's algorithm [[1]](#1) is implemented but other algorithms will be added in time.
 
-Current supported solvers:
+The package contains a [JuMP](https://jump.dev/JuMP.jl/dev/) interface, but may also be used standalone.
 
-- Hildreth : an implementation of Hildreth's method, designed for QP problems with linear constraints. Has a minimal working JuMP interface. Tested with small problems, but no guarantees on precision or stability.
+<a id="1">[1]</a> Hildreth, C. (1957), A quadratic programming procedure. Naval Research Logistics, 4: 79-85. doi:10.1002/nav.3800040113
 
-## API Example
+## Installation
 
-A simple example using the Hildreth solver. The variables E, F, m, and γ refer to a QP problem in the form min ½(x'Ex)+F'x s.t. Mx≦γ.
+```julia
+pkg> add https://github.com/ImperialCollegeLondon/RowActionMethods.jl
+```
 
+## Usage 
+
+The following example solves a QP problem in 3 dimensions and can be formulated the same as any other JuMP problem. Note that the problem has the form `½(x'Ex)+F'x s.t. Mx≦γ`. Also note that RowActionMethods.jl defines `const RAM = RowActionMethods` as a shorthand.
+
+### **Usage With JuMP**
 ```julia
 using JuMP
 using RowActionMethods
-
-const RAM = RowActionMethods
 
 model = Model(with_optimizer(RAM.Optimizer, "Hildreth"))
 
@@ -39,22 +44,56 @@ optimize!(model)
 println("x[1]: ", JuMP.value(x[1]))
 println("x[2]: ", JuMP.value(x[2]))
 println("x[3]: ", JuMP.value(x[3]))
-#Returning objective value is currently unsupported
+#Returning objective value is currently unsupported for the JuMP interface
 #println("objv: ", objective_value(model))
 ```
 
-## Custom Stopping Conditions
-The API also offers more flexibility in stopping conditions. However these are not currently implemented when using JuMP, this will be coming shortly.
+### **Direct Usage**
 
-## Installation
+```julia
+using RowActionMethods
+
+model = GetModel("Hildreth")
+
+E=[2 3 2; 3 7 5; 2 5 4]
+F=[4;7;3]
+M=[-1 0 2; 0 -1 3; 3 2 4]
+γ=[0;0;4]
+
+SetObjective(model, E, F)
+
+for i=1:3
+    AddConstraint(model, M[i,:], γ[i])
+end
+
+Optimize(model)
+
+println(GetObjectiveValue(model))
+println(GetVariables(model))
 ```
-using Pkg
-Pkg.add("https://github.com/ImperialCollegeLondon/RowActionMethods.jl.git")
+
+Solving performance is identical between JuMP and direct usage, however JuMP may be slightly slower when initially setting up the problem due a small overhead. Direct usage also allows for easier access to internal information, and new features will always be supported via the interal API before JuMP.
+
+The internal API is defined in the documentation, and the general JuMP API is supported. If a useful feature of JuMP appears to be unsupported please raise an issue/pull request and it can be added.
+
+## Stopping Conditions
+The solver supports the ability to terminate optimisation based on an arbitrary condition. This is currently only properly supported in the direct API (but can be hacked into JuMP, proper support coming soon).
+
+The algorithm must be used with at least one stopping condition. By default this will be an iteration limit of 32.
+
+The built in stopping conditions are `IterationStop` and `TimeStop`. Each is instantiated with their limit (number of iterations and seconds respectively) and passed to `Optimize`.
+
+To use a single stopping condition:
+```julia
+time_limit = TimeStop(30) #A 30 second time limit
+Optimize(model, time_limit)
 ```
 
+Use multiple stopping conditions by passing them as a vector:
+```julia
+time_limit = TimeStop(30) #A 30 second time limit
+iteration_limit = IterationStop(15) #Stop after 15 iterations
+Optimize(model, [time_limit, iteration_limit])
+```
 
-## Known Limitations/Issues/Workarounds
-- MathOptInterface's method for adding constrained variables is incompatible with this package. To constrain a variable, declare it and then add a specific constraint.
-
-## Contribution
-If you run into any issues, or want to use some specific features of JuMP that aren't available, please raise an issue.
+The ordering of the vector does not impact the solver. Custom stopping conditions can be defined easily. See the documentation for a guide on implementing these.
