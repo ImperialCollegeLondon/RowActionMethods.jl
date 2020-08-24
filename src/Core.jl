@@ -128,10 +128,17 @@ function _init_run(model::RAMProblem)
     model.statistics.BuildTime = time() - t1
 end
 
-optimize!(model::RAMProblem, ::Nothing) = optimize!(model)
 
 """
-    optimize!(model::RAMProblem)
+    optimize!(model::RAMProblem, s::StoppingCondition)
+
+As [`optimize!`](@ref optimize!(model::RAMProblem{T,F}, conditions::Vector{S} = [IterationStop(32)])) but takes
+a single stopping condition to end on rather than a vector of stopping conditons.
+"""
+optimize!(model::RAMProblem, s::StoppingCondition) = optimize!(model, [s])
+
+"""
+    optimize!(model::RAMProblem{T,F}, conditions::Vector{S} = [IterationStop(32)]) where {T,F,S<:StoppingCondition}
 
 Iterate `model.method` algorithm until a stopping condition has been met, then
 set the termination status and calculate the primal solution.
@@ -143,24 +150,10 @@ If configured as multi threaded then `IterateRow` is called for each index in th
 variable returned by `GetTempVar`. Calls to `IterateRow` are distributed amongst all
 available threads.
 
-Configures the algorithm to terminate after 32 iterations.
+By default, `conditions` contains only an iteration termination criteria to terminate the algorithm
+after 32 iterations.
 """
-optimize!(model::RAMProblem) = optimize!(model, [IterationStop(32)])
-
-"""
-    optimize!(model::RAMProblem, s::StoppingCondition)
-
-As [`optimize!`](@ref optimize!(::RAM.RAMProblem)) but takes a single stopping condition to end on rather than
-the default.
-"""
-optimize!(model::RAMProblem, s::StoppingCondition) = optimize!(model, [s])
-
-"""
-    optimize!(model::RAMProblem{T,F}, conditions::Vector{S}) where {T,F,S<:StoppingCondition}
-
-As [`optimize!`](@ref optimize!(::RAM.RAMProblem)) but takes a vector of single stopping conditions to end on.
-"""
-function optimize!(model::RAMProblem{T,F}, conditions::Vector{S}) where {T,F,S<:StoppingCondition}
+function optimize!(model::RAMProblem{T,F}, conditions::Vector{S} = [IterationStop(32)]) where {T,F,S<:StoppingCondition}
 
     _init_run(model)
 
