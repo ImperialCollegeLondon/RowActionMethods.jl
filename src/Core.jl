@@ -1,4 +1,4 @@
-export GetModel, Optimize, SetThreads, GetVariables, GetObjectiveValue
+export GetModel, optimize!, SetThreads, GetVariables, objective_value
 
 """
     GetModel(model::String; kwargs...)::RAMProblem
@@ -88,20 +88,20 @@ GetTempVar(m::RAMProblem) = GetTempVar(m.method)
 VarUpdate(m::RAMProblem{T}, var::Vector{T}) where T = VarUpdate(m.method, var)
 
 """
-    GetObjectiveValue(model::RAMProblem{T,F})::T
+    objective_value(model::RAMProblem{T,F})::T
 
 Return the evaluated objective for the current solution.
 """
-(GetObjectiveValue(model::RAMProblem{T,F})::T) where {T,F}=
-    GetObjectiveValue(model, ObjectiveType(model.method))
+(objective_value(model::RAMProblem{T,F})::T) where {T,F}=
+    objective_value(model, ObjectiveType(model.method))
 
 
 """
-    GetObjectiveValue(model::RAMProblem, ::Quadratic)
+    objective_value(model::RAMProblem, ::Quadratic)
 
 Evaluate the cost of the objective function for a quadratic objective.
 """
-function GetObjectiveValue(model::RAMProblem, ::Quadratic)
+function objective_value(model::RAMProblem, ::Quadratic)
     B, d = GetObjective(model)
     x = GetVariables(model)
 
@@ -128,10 +128,10 @@ function RunBuild(model::RAMProblem)
     model.statistics.BuildTime = time() - t1
 end
 
-Optimize(model::RAMProblem, ::Nothing) = Optimize(model)
+optimize!(model::RAMProblem, ::Nothing) = optimize!(model)
 
 """
-    Optimize(model::RAMProblem)
+    optimize!(model::RAMProblem)
 
 Iterate `model.method` algorithm until a stopping condition has been met, then
 set the termination status and calculate the primal solution.
@@ -145,22 +145,22 @@ available threads.
 
 Configures the algorithm to terminate after 32 iterations.
 """
-Optimize(model::RAMProblem) = Optimize(model, [IterationStop(32)])
+optimize!(model::RAMProblem) = optimize!(model, [IterationStop(32)])
 
 """
-    Optimize(model::RAMProblem, s::StoppingCondition)
+    optimize!(model::RAMProblem, s::StoppingCondition)
 
-As [`Optimize`](@ref Optimize(::RAM.RAMProblem)) but takes a single stopping condition to end on rather than
+As [`optimize!`](@ref optimize!(::RAM.RAMProblem)) but takes a single stopping condition to end on rather than
 the default.
 """
-Optimize(model::RAMProblem, s::StoppingCondition) = Optimize(model, [s])
+optimize!(model::RAMProblem, s::StoppingCondition) = optimize!(model, [s])
 
 """
-    Optimize(model::RAMProblem{T,F}, conditions::Vector{S}) where {T,F,S<:StoppingCondition}
+    optimize!(model::RAMProblem{T,F}, conditions::Vector{S}) where {T,F,S<:StoppingCondition}
 
-As [`Optimize`](@ref Optimize(::RAM.RAMProblem)) but takes a vector of single stopping conditions to end on.
+As [`optimize!`](@ref optimize!(::RAM.RAMProblem)) but takes a vector of single stopping conditions to end on.
 """
-function Optimize(model::RAMProblem{T,F}, conditions::Vector{S}) where {T,F,S<:StoppingCondition}
+function optimize!(model::RAMProblem{T,F}, conditions::Vector{S}) where {T,F,S<:StoppingCondition}
 
     RunBuild(model)
 

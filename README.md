@@ -16,7 +16,7 @@ The package contains a [JuMP](https://jump.dev/JuMP.jl/dev/) interface, but may 
 pkg> add https://github.com/ImperialCollegeLondon/RowActionMethods.jl
 ```
 
-## Usage 
+## Usage
 
 The following example solves a QP problem in 3 dimensions and can be formulated the same as any other JuMP problem. Note that the problem has the form `½(x'Ex)+F'x s.t. Mx≦γ`. Also note that RowActionMethods.jl defines `const RAM = RowActionMethods` as a shorthand.
 
@@ -66,9 +66,9 @@ for i=1:3
     AddConstraint(model, M[i,:], γ[i])
 end
 
-Optimize(model)
+optimize!(model)
 
-println(GetObjectiveValue(model))
+println(objective_value(model))
 println(GetVariables(model))
 ```
 
@@ -81,19 +81,19 @@ The solver supports the ability to terminate optimisation based on an arbitrary 
 
 The algorithm must be used with at least one stopping condition. By default this will be an iteration limit of 32.
 
-The built in stopping conditions are `IterationStop` and `TimeStop`. Each is instantiated with their limit (number of iterations and seconds respectively) and passed to `Optimize`.
+The built in stopping conditions are `IterationStop` and `TimeStop`. Each is instantiated with their limit (number of iterations and seconds respectively) and passed to `optimize!`.
 
 To use a single stopping condition:
 ```julia
 time_limit = TimeStop(30) #A 30 second time limit
-Optimize(model, time_limit)
+optimize!(model, time_limit)
 ```
 
 Use multiple stopping conditions by passing them as a vector:
 ```julia
 time_limit = TimeStop(30) #A 30 second time limit
 iteration_limit = IterationStop(15) #Stop after 15 iterations
-Optimize(model, [time_limit, iteration_limit])
+optimize!(model, [time_limit, iteration_limit])
 ```
 
 The ordering of the vector does not impact the solver. Custom stopping conditions can be defined easily. See the documentation for a guide on implementing these.

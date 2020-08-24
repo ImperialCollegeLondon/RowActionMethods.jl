@@ -46,16 +46,16 @@
     @testset "GetVariables" begin end
     @testset "is_empty" begin end
     @testset "get_model_status" begin end
-    @testset "GetObjectiveValue" begin end
+    @testset "objective_value" begin end
     @testset "SupportsDeleteConstraint" begin end
     @testset "IterateRow" begin end
     @testset "GetTempVar" begin end
     @testset "VarUpdate" begin end
-    @testset "GetObjectiveValue" begin end
+    @testset "objective_value" begin end
 
     @testset "Setup" begin end
     @testset "RunBuild" begin end
-    @testset "Optimize" begin end
+    @testset "optimize!" begin end
 
 
 end

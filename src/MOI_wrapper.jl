@@ -47,7 +47,7 @@ end
 #= Model Actions =#
 function MOI.optimize!(model::Optimizer)
     RAM.SetThreads(model.inner_model; threads = model.threads)
-    RAM.Optimize(model.inner_model, model.stopping_conditions)
+    RAM.optimize!(model.inner_model, model.stopping_conditions)
 end
 
 #= Custom Options =#
@@ -246,7 +246,7 @@ end
 
 function MOI.get(model::Optimizer, ::MOI.ObjectiveValue)
     sense = model.sense == MOI.MAX_SENSE ? -1 : 1
-    return sense * RAM.GetObjectiveValue(model.inner_model)
+    return sense * RAM.objective_value(model.inner_model)
 end
 
 function MOI.get(model::Optimizer, ::MOI.VariablePrimal, vi::MOI.VariableIndex)
