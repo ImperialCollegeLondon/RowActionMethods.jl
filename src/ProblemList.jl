@@ -1,7 +1,7 @@
 using JuMP
 
-#All problems return their model, and an array of any variables that they 
-#define. Each variables may be multivalued. 
+#All problems return their model, and an array of any variables that they
+#define. Each variables may be multivalued.
 
 function QLR2_AN_4_6()
   #Note; JuMP does not evaluate this QP problem to have a pos-def matrix
@@ -22,7 +22,7 @@ function QLR2_AN_4_6()
   @constraint(problem, -8  +   x[3] + 2*x[4] <= 0)
   @constraint(problem, -5  +   x[3] +   x[4] <= 0)
 
-  @objective(problem,  Min, 
+  @objective(problem,  Min,
              x[1] - x[2] - x[3] - x[1]*x[3] + x[1]*x[4] + x[2]*x[3] - x[2]*x[4])
 
   return problem, x

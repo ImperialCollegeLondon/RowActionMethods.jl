@@ -1,21 +1,21 @@
 @testset "Core" begin
 
-    @testset "GetModel" begin 
+    @testset "GetModel" begin
         #Only test for basic functionality here.
         #Put more detailed tests in individual solver test files.
 
         @test_throws MethodError RAM.GetModel()
         @test_throws MethodError RAM.GetModel(;some_option = true)
- 
+
         #please don't name a solver this
-        @test_throws ArgumentError RAM.GetModel("Nonexistent Algorithm") 
+        @test_throws ArgumentError RAM.GetModel("Nonexistent Algorithm")
 
         problem = RAM.GetModel("Hildreth")
         @test typeof(problem) == RAM.RAMProblem{Float64,Int64}
         @test typeof(problem.method) == RAM.Hildreth{Float64}
     end
 
-    @testset "ObjectiveType" begin 
+    @testset "ObjectiveType" begin
         problem = RAM.GetModel("Hildreth")
         @test RAM.ObjectiveType(problem) == RAM.ObjectiveType(problem.method) == RAM.Quadratic()
     end
@@ -25,17 +25,17 @@
         @test problem.threads == false
 
         RAM.SetThreads(problem)
-        @test problem.threads == true 
+        @test problem.threads == true
 
         RAM.SetThreads(problem; threads=true)
-        @test problem.threads == true 
+        @test problem.threads == true
 
         RAM.SetThreads(problem; threads=false)
         @test problem.threads == false
     end
 
-    @testset "GetObjective" begin 
-        
+    @testset "GetObjective" begin
+
     end
 
     @testset "GetObjectiveFactorised" begin end

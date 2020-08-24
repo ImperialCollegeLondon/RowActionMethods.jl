@@ -10,14 +10,14 @@ model. Extend in file for each algorithm type.
 abstract type RowActionMethod end
 
 """
-Type used as supertype of specific model formulations used by 
+Type used as supertype of specific model formulations used by
 different algorithms.
 """
 abstract type ModelFormulation end
 
 abstract type AbstractObjectiveType end
-struct Quadratic <: AbstractObjectiveType end 
-struct Linear <: AbstractObjectiveType end 
+struct Quadratic <: AbstractObjectiveType end
+struct Linear <: AbstractObjectiveType end
 ObjectiveType(m::ModelFormulation) = error("$(typeof(m)) should define an objective function type")
 
 abstract type AbstractObjective end
@@ -30,7 +30,7 @@ struct SparseQuadraticObjective{T} <: AbstractObjective
     function SparseQuadraticObjective{T}(Q,F) where T
         #TODO this formulation needs to be changed
         #currently Q must be dense, but this is memory
-        #inefficient and wasteful if sparse is provided 
+        #inefficient and wasteful if sparse is provided
         #in the first place
         Qf = cholesky(Q)
         Q = sparse(Q)
@@ -51,7 +51,7 @@ end
 
 Store the matrix and variable that defines the problem constraints.
 
-Note that the `Functions` entry (that stores the matrix) stores a 
+Note that the `Functions` entry (that stores the matrix) stores a
 transposed form. I.e. for the standard linear constraint formulation:
 
 ``Qx≤b``
@@ -62,10 +62,10 @@ to more efficiently concatenate columns than rows (even for sparse storage).
 mutable struct Constraints{T,F}
     Functions::SparseMatrixCSC{T}
     Limits::SparseVector{T}
- 
+
     #Maps constraint index to actual vector index
     constraint_indexes::Dict{F, F}
-    
+
     #Tracks largest constraint to ensure a unique new index
     max_constraint_index::F
     #Track number of constraints
@@ -93,7 +93,7 @@ struct UNKNOWN_TERMINATION_CONDITION    <: AbstractStatus end
 mutable struct RAMProblem{T,F}
     #== Variables ==#
     variable_count::F
-    
+
     #== Constraints ==#
     constraints::Constraints{T,F}
 
@@ -108,7 +108,7 @@ mutable struct RAMProblem{T,F}
 
     #== Threading ==#
     threads::Bool
-    
+
     statistics::Statistics{T}
 
     RAMProblem(model::String; kwargs...) = RAMProblem{Float64, Int64}(model; kwargs...)
@@ -127,7 +127,7 @@ mutable struct RAMProblem{T,F}
         p.statistics = Statistics{T}()
 
         p.method = method_mapping[model]{T}(;kwargs...)
-        return p 
+        return p
     end
 end
 

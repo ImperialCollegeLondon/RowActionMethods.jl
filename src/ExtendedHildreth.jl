@@ -40,7 +40,7 @@ mutable struct ExtendedHildreth <: ModelFormulation
     D::Union{UpperTriangular{Float64},Nothing}#Defined as union for initialisation
     A::Array{Float64}
     b::Vector{Float64}
-    #Working vars 
+    #Working vars
     iterations::Int
     x::Vector{Float64}
     z::Vector{Float64}
@@ -49,16 +49,16 @@ mutable struct ExtendedHildreth <: ModelFormulation
     z_initial::Union{Vector{Number}, Number}
 end
 """
-    GetModel(::ExtendedHildreth, z_initial::Union{Vector{Number}, Number}, 
+    GetModel(::ExtendedHildreth, z_initial::Union{Vector{Number}, Number},
     relaxation_func::Function)::ExtendedHildreth
 
-Returns a skeleton model of the problem for solving with the extended Hildreth's modethod. 
+Returns a skeleton model of the problem for solving with the extended Hildreth's modethod.
 
 z_initial is the initial value of the z dual variable. Any supplied vector should be of the correct dimensions (z∈ℝᵐ, where m is the number of constraints). If a scalar k is supplied then z will be a column vector of ones scaled by k.
 
 This method supports the inclusion of a relaxation parameter, this is a scaling that is applied on each iteration (see the original paper for details). This passed function should calculate the relaxation parameter value from the current iteration index. All resultant values should be close to 1 for convergence to hold. By default relaxation will be 1.
 """
-function GetModel(::ExtendedHildreth, 
+function GetModel(::ExtendedHildreth,
                    z_initial::Union{Vector{Number}, Number},
                    relaxation_func::Function
                   )::ExtendedHildreth
@@ -68,19 +68,19 @@ function GetModel(::ExtendedHildreth,
                                  relaxation_func, z_initial)
 end
 
-#Better ideas on how to structure this are welcome 
+#Better ideas on how to structure this are welcome
 """
     GetModel(::ExtendedHildreth; options...)
 
 Optional arguments:
-z_initial - initial value for z to take, must be in 
-the non-negative orthant of Rⁿ (defaults to vector of ones). Can be 
+z_initial - initial value for z to take, must be in
+the non-negative orthant of Rⁿ (defaults to vector of ones). Can be
 a vector (of the correct dimension for the problem) or a scalar multiplier of the vector of ones.
 relaxation - a value for the relaxation series to take, either a constant or a function to generate relaxation value from the iteration index. All values should be positive for convergence proof to hold.
 """
 function GetModel(::ExtendedHildreth; options...)
     options = Dict(options)
-    if haskey(options, "z_initial") 
+    if haskey(options, "z_initial")
         z=options["z_initial"]
     else
         z=1
@@ -110,7 +110,7 @@ function buildmodel!(model::ExtendedHildreth, B, d, G, h)
 
     model.n=size(d)[1]
     model.m=size(h)[1]
-    
+
     model.B_chol=cholesky(B)
     model.D=model.B_chol.U
     model.A=G/model.D #A=GD^-1
@@ -122,20 +122,20 @@ function buildmodel!(model::ExtendedHildreth, B, d, G, h)
     #Error if z_initial is a vector of the wrong dimension
     elseif size(model.z_initial) != model.m
         error("Problem definition does not fit supplied initial value for z")
-    else 
+    else
         model.z = model.z_inital
     end
 
-    model.x=-model.A'*model.z 
+    model.x=-model.A'*model.z
 end
 
-#slightly unsure about the algorithm 
+#slightly unsure about the algorithm
 function iterate!(model::ExtendedHildreth)
     #c = min(zᵢ, uᵢ)
     #uᵢ = r * (bᵢ-⟨aᵢ,x⟩)/∥aᵢ∥²
     #xₖ₊₁ = xₖ+c_aᵢ
     #zₖ₊₁ = zₖ+c_eᵢ
-    
+
     r = model.relaxation(model.iterations)
     b = model.b
     A = model.A
@@ -155,16 +155,16 @@ function iterate!(model::ExtendedHildreth)
     end
 
     model.x += x_temp
-    model.z -= z_temp 
+    model.z -= z_temp
     model.iterations += 1
-    
+
 end
 
 """
     validmodel(model::ExtendedHildreth)::Bool
 
 Method doesn't implement a prior check for viability, therefore function
-always returns false to ensure that solver runs. 
+always returns false to ensure that solver runs.
 """
 function valid_unconstrained(model::ExtendedHildreth)::Bool
     return false
@@ -173,7 +173,7 @@ end
 """
     get_unconstrained(model::ExtendedHildreth)
 
-As a prior check for viability is never resolved as true, this method 
+As a prior check for viability is never resolved as true, this method
 does nothing.
 """
 function get_unconstrained(model::ExtendedHildreth)

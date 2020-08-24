@@ -5,13 +5,13 @@ export GetModel, Optimize, SetThreads, GetVariables, GetObjectiveValue
 
 Return problem definition configured with the specified method.
 
-kwargs are passed directly to the method's constructor, see the method for 
+kwargs are passed directly to the method's constructor, see the method for
 documentation on available options.
 
 This function queries `RAM.method_mapping` to find valid methods.
 """
 function GetModel(method::String; kwargs...)::RAMProblem
-    !haskey(method_mapping, method) && 
+    !haskey(method_mapping, method) &&
             throw(ArgumentError("Invalid row action method specified, valid" *
                                 " methods are: $(keys(RAM.method_mapping))"))
     return RAMProblem(method; kwargs...)
@@ -24,7 +24,7 @@ ObjectiveType(model::RAMProblem) = ObjectiveType(model.method)
 
 Enable/disable threading for `model`.
 
-This only has an effect if the method used by `model` has implemented 
+This only has an effect if the method used by `model` has implemented
 a threaded variation of its algorithm.
 
 Julia will set the number of threads to that defined by the
@@ -89,7 +89,7 @@ VarUpdate(m::RAMProblem{T}, var::Vector{T}) where T = VarUpdate(m.method, var)
 
 """
     GetObjectiveValue(model::RAMProblem{T,F})::T
-    
+
 Return the evaluated objective for the current solution.
 """
 (GetObjectiveValue(model::RAMProblem{T,F})::T) where {T,F}=
@@ -108,7 +108,7 @@ function GetObjectiveValue(model::RAMProblem, ::Quadratic)
     return 0.5*x'*B*x + x'*d
 end
 
-SetObjective(model::RAMProblem, args...) = 
+SetObjective(model::RAMProblem, args...) =
     SetObjective(model, ObjectiveType(model.method), args...)
 
 """
@@ -122,7 +122,7 @@ function SetObjective(model::RAMProblem{T,F}, ::Quadratic, Q::AbstractMatrix, V:
 end
 
 #Build wrapper to set timings
-function RunBuild(model::RAMProblem) 
+function RunBuild(model::RAMProblem)
     t1 = time()
     Build(model, model.method)
     model.statistics.BuildTime = time() - t1
@@ -158,18 +158,18 @@ Optimize(model::RAMProblem, s::StoppingCondition) = Optimize(model, [s])
 """
     Optimize(model::RAMProblem{T,F}, conditions::Vector{S}) where {T,F,S<:StoppingCondition}
 
-As [`Optimize`](@ref Optimize(::RAM.RAMProblem)) but takes a vector of single stopping conditions to end on. 
+As [`Optimize`](@ref Optimize(::RAM.RAMProblem)) but takes a vector of single stopping conditions to end on.
 """
 function Optimize(model::RAMProblem{T,F}, conditions::Vector{S}) where {T,F,S<:StoppingCondition}
-    
+
     RunBuild(model)
-   
+
     #Run iterations until stop conditions are met
     #TODO put in checks that the target algorithm supports threading
 
     t1 = time()
     if !model.threads
-        while !check_stopcondition(model, conditions) 
+        while !check_stopcondition(model, conditions)
             Iterate(model)
             model.iterations += 1
         end
@@ -178,7 +178,7 @@ function Optimize(model::RAMProblem{T,F}, conditions::Vector{S}) where {T,F,S<:S
         thread_var = convert(Vector{T}, GetTempVar(model))
         while !check_stopcondition(model, conditions)
             Threads.@threads for i in 1:length(thread_var)
-                thread_var[i] = IterateRow(model, i, thread_var) 
+                thread_var[i] = IterateRow(model, i, thread_var)
             end
             model.iterations += 1
             VarUpdate(model, thread_var)

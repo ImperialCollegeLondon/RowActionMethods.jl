@@ -16,7 +16,7 @@ include("./MOI_wrapper.jl")
 include("./Constraints.jl")
 include("./Core.jl")
 
-#Method includes 
+#Method includes
 include("./Hildreth.jl")
 include("./ExtendedHildreth.jl")
 

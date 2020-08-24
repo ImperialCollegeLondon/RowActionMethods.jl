@@ -6,7 +6,7 @@ using Distributions
     Hildreth(E, F, M, γ, H K, ucSoln, Soln, E_fact, workingvars, options)
 
 A model for solving the problem with Hildreth's original method.
-For the problem: 
+For the problem:
 min ½(x'Ex)+F'x s.t. Mx≦γ
 
 ucSoln - Unconstrained solution of the problem\n
@@ -29,14 +29,14 @@ mutable struct Hildreth{T} <: ModelFormulation
 
     function Hildreth{T}(;kwargs...) where T
         m = new()
-        m.user_initial_point = 
+        m.user_initial_point =
             haskey(kwargs, :initial) ? kwargs[:initial] : nothing
         return m
     end
 end
 
 ObjectiveType(::Hildreth) = Quadratic()
-SupportsVariableDeletion(::Hildreth) = true 
+SupportsVariableDeletion(::Hildreth) = true
 
 function DeleteVariable(method::Hildreth, index)
     method.λ[index] = 0.0
@@ -49,12 +49,12 @@ end
 Builds the internal variables based on problem specification
 """
 function Build(model::RAMProblem, method::Hildreth)
-    #Need G to be dense 
+    #Need G to be dense
     G = Matrix(GetConstraintMatrixTransposed(model)')
     h = GetConstraintVector(model)
 
     B, d = GetObjectiveFactorised(model)
-    
+
     #TODO possible to make these more efficient?
     #currently the slowest part of the build process
 
@@ -106,12 +106,12 @@ end
 
 Performs one iteration of the algorithm. Updates λ as it progresses.
 
-Treats the entire summation as a calculation of H_i * λ, then subtracts the 
-contribution of the currently considered λ. 
+Treats the entire summation as a calculation of H_i * λ, then subtracts the
+contribution of the currently considered λ.
 """
 function Iterate(method::Hildreth)
     #TODO proper performance analysis between two implementations,
-    #as well as confirming that both methods work correctly 
+    #as well as confirming that both methods work correctly
     #method.z .= max.(0, method.z-method.Δ'*method.z + method.b ./ diag(method.Δ))
     for i in 1:method.n
         w = method.Δ[:,i]'*method.z
@@ -149,8 +149,8 @@ end
 A stop condition that implements the following convergence check:
 ```math
 (λ-λ_old)^T*(λ-λ_old) < limit
-``` 
-Where 'limit' is the value below which computation will halt. 
+```
+Where 'limit' is the value below which computation will halt.
 """
 #TODO naming convention
 struct SC_HildrethConvergence <: StoppingCondition
@@ -162,7 +162,7 @@ end
 
 Convergence checking for original Hildreth implementation.
 """
-function stopcondition(model::Hildreth, 
+function stopcondition(model::Hildreth,
                        convergence::SC_HildrethConvergence
                        )::Bool
     λ = model.λ
@@ -182,7 +182,7 @@ function Resolve(model::RAMProblem, method::Hildreth)
     method.x = -method.A'*method.z
 end
 
-function GetVariables(model::RAMProblem, method::Hildreth) 
+function GetVariables(model::RAMProblem, method::Hildreth)
     B, d = GetObjectiveFactorised(model)
     return B.U\method.x - B\Vector(d)
 end

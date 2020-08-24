@@ -29,7 +29,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
         model.silent = false
         model.variable_count = 0
         model.constraints = Vector{MOI.ConstraintIndex}()
-                                  
+
         model.stopping_conditions = nothing
 
         model.threads = false
@@ -52,7 +52,7 @@ end
 
 #= Custom Options =#
 #TODO rethink this interface, especially for stopping conditions
-function MOI.set(model::Optimizer, option::MOI.RawParameter, val) 
+function MOI.set(model::Optimizer, option::MOI.RawParameter, val)
     if option.name == "iterations"
         model.stopping_conditions = RAM.SC_Iterations(val)
     elseif option.name == "conditions"
@@ -65,12 +65,12 @@ function MOI.set(model::Optimizer, option::MOI.RawParameter, val)
 end
 
 #= Model Status =#
-function MOI.supports(model::Optimizer, 
+function MOI.supports(model::Optimizer,
                       ::MOI.ObjectiveFunction{MOI.ScalarQuadraticFunction{Float64}})
     return RAM.ObjectiveType(model.inner_model) == RAM.Quadratic()
 end
 
-function MOI.supports(model::Optimizer, 
+function MOI.supports(model::Optimizer,
                       ::MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}})
     return RAM.ObjectiveType(model.inner_model) == RAM.Linear()
 end
@@ -123,10 +123,10 @@ function MOI.delete(model::Optimizer, index::MOI.VariableIndex)
 end
 
 #= Constraints =#
-#TODO: Add ability to add non lessthan constraints, probably needs indicator 
+#TODO: Add ability to add non lessthan constraints, probably needs indicator
 #function in solvers?
-function MOI.add_constraint(model::Optimizer, 
-                            func::MOI.ScalarAffineFunction{T}, 
+function MOI.add_constraint(model::Optimizer,
+                            func::MOI.ScalarAffineFunction{T},
                             lim::MOI.LessThan{T})::MOI.ConstraintIndex where T
     #TODO: Raise error on non-zero valued constant in func
     constraint_function = zeros(model.variable_count)
@@ -135,8 +135,8 @@ function MOI.add_constraint(model::Optimizer,
     end
 
     index = RAM.AddConstraint(model.inner_model, constraint_function, lim.upper)
-    constraint_index = MOI.ConstraintIndex{MOI.ScalarAffineFunction{Float64}, 
-                                           MOI.LessThan{Float64}}(index) 
+    constraint_index = MOI.ConstraintIndex{MOI.ScalarAffineFunction{Float64},
+                                           MOI.LessThan{Float64}}(index)
     push!(model.constraints, constraint_index)
     return constraint_index
 end
@@ -149,7 +149,7 @@ end
 
 function MOI.supports_constraint(model::Optimizer,
                                  ::Type{MOI.VectorOfVariables},
-                                 ::Type{MOI.Reals})::Bool 
+                                 ::Type{MOI.Reals})::Bool
     return true
 end
 
@@ -159,12 +159,12 @@ function MOI.delete(model::Optimizer, index::MOI.ConstraintIndex{F,S}) where {F,
     setdiff!(model.constraints, [index])
 end
 
-function MOI.modify(model::Optimizer, 
+function MOI.modify(model::Optimizer,
                     con_index::MOI.ConstraintIndex{F,S},
                     change::MOI.ScalarCoefficientChange{Float64}) where {F,S}
-    RAM.edit_constraint_coefficient!(model.inner_model, 
-                                     con_index.value, 
-                                     change.variable.value, 
+    RAM.edit_constraint_coefficient!(model.inner_model,
+                                     con_index.value,
+                                     change.variable.value,
                                      change.new_coefficient)
 end
 
@@ -172,27 +172,27 @@ function MOI.modify(model::Optimizer,
                     con_index::MOI.ConstraintIndex{F,S},
                     change::MOI.ScalarConstantChange{Float64}) where {F,S}
     RAM.edit_constraint_constant!(model.inner_model,
-                                  con_index.value, 
+                                  con_index.value,
                                   change.new_constant)
 end
 
 #Currently not supporting in-place modification, rebuilds the model each time
 function MOI.set(model::Optimizer, ::MOI.ConstraintSet, c::MOI.ConstraintIndex{F,MOI.LessThan}, set::MOI.LessThan) where {F, S}
-    MOI.modify(model, c, MOI.ScalarConstantChange(c.upper))    
+    MOI.modify(model, c, MOI.ScalarConstantChange(c.upper))
 end
 
 #= MOI.set functions =#
 #TODO objective set functions for non quadratic functions, if non quadratic solvers are added
-function MOI.set(model::Optimizer, 
-                 ::MOI.ObjectiveFunction{F}, 
-                 val::F) where {F <: MOI.ScalarQuadraticFunction{Float64}} 
+function MOI.set(model::Optimizer,
+                 ::MOI.ObjectiveFunction{F},
+                 val::F) where {F <: MOI.ScalarQuadraticFunction{Float64}}
 
     num_vars = model.variable_count
     Q = zeros(num_vars, num_vars)
     a = zeros(num_vars)
 
     sense = model.sense == MOI.MAX_SENSE ? -1 : 1
-    
+
     for t in val.quadratic_terms
         Q[t.variable_index_1.value, t.variable_index_2.value] = sense * t.coefficient
         Q[t.variable_index_2.value, t.variable_index_1.value] = sense * t.coefficient
@@ -224,7 +224,7 @@ function MOI.get(model::Optimizer, ::MOI.NumberOfVariables)::Int
     return model.variable_count
 end
 
-function MOI.get(model::Optimizer, 
+function MOI.get(model::Optimizer,
                  ::MOI.NumberOfConstraints{MOI.ScalarAffineFunction{T},
                                            MOI.LessThan{T}})::Int where T
     #FIXME update with type access not dict access
@@ -236,7 +236,7 @@ RAM_MOI_Termination_Map = Dict(
                                RAM.OPTIMIZE_NOT_CALLED() => MOI.OPTIMIZE_NOT_CALLED,
                                RAM.OPTIMAL()             => MOI.OPTIMAL,
                                RAM.INFEASIBLE()          => MOI.INFEASIBLE,
-                               RAM.ITERATION_LIMIT()     => MOI.ITERATION_LIMIT,  
+                               RAM.ITERATION_LIMIT()     => MOI.ITERATION_LIMIT,
                                RAM.TIME_LIMIT()          => MOI.TIME_LIMIT
                               )
 

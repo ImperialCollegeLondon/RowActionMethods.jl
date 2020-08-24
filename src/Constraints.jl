@@ -6,7 +6,7 @@ export AddConstraint
 function AddConstraint(model::RAMProblem{T}, M_row::SparseVector{T}, lim::T)::Int where T
     !validconstraint(model, M_row, lim) && error("Invalid constraint, have you added an objective?")
     c = model.constraints
-    
+
     if c.constraint_count == 0
         c.Functions = M_row
         c.Limits = sparse([lim])
@@ -31,16 +31,16 @@ end
 
 Return the constraint matrix.
 """
-(GetConstraintMatrixTransposed(model::RAMProblem{T})::SparseMatrixCSC{T}) where T = 
+(GetConstraintMatrixTransposed(model::RAMProblem{T})::SparseMatrixCSC{T}) where T =
     model.constraints.Functions
 
-(GetConstraintVector(model::RAMProblem{T})::SparseVector{T}) where T = 
+(GetConstraintVector(model::RAMProblem{T})::SparseVector{T}) where T =
     model.constraints.Limits
 
 #TODO parametric type
 function is_model_empty(model::RAMProblem)
     return ((!isdefined(model.constraints, :Functions) &&
-             !isdefined(model.constraints, :Limits)) || 
+             !isdefined(model.constraints, :Limits)) ||
             (isempty(model.constraints.Functions) &&
              isempty(model.constraints.Limits))) &&
            model.variable_count == 0 &&
@@ -66,7 +66,7 @@ end
 
 """
     extendcontraints(model::ModelFormulation)
-    
+
 Append a new value to the end of each constraint in model. Assumes that a new
 variable being added is added at the end.
 """
@@ -79,9 +79,9 @@ end
 
 """
     shrinkconstraints(model::ModelFormulation, index::Int)
-    
+
 Removes the entry in each constraint at index. Also removes any constraints with
-no non-zero coefficients. 
+no non-zero coefficients.
 
 Should not be called directly, as this will result in an inconsistent internal
 state.
@@ -98,7 +98,7 @@ end
 
 Performs actions to remove constraint entries and modify objective
 function to remove all references to a variable index, while maintaining
-a consistent internal state. 
+a consistent internal state.
 
 Note that the act of removing a variable from the objective function is
 currently expensive when using a very large number of variables. This shouldn't
@@ -122,7 +122,7 @@ function check_emptyconstraint(con::ConstraintEntry)::Bool
     Length(con.func) == 0 && return true
 
     for e in con.func
-        if e != 0 
+        if e != 0
             return false
         end
     end
