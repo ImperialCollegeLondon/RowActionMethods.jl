@@ -17,7 +17,7 @@ function GetModel(method::String; kwargs...)::RAMProblem
     return RAMProblem(method; kwargs...)
 end
 
-ObjectiveType(model::RAMProblem) = ObjectiveType(model.method)
+_objective_type(model::RAMProblem) = _objective_type(model.method)
 
 """
     SetThreads(model::RAMProblem; threads::Bool=true)
@@ -93,7 +93,7 @@ VarUpdate(m::RAMProblem{T}, var::Vector{T}) where T = VarUpdate(m.method, var)
 Return the evaluated objective for the current solution.
 """
 (objective_value(model::RAMProblem{T,F})::T) where {T,F}=
-    objective_value(model, ObjectiveType(model.method))
+    objective_value(model, _objective_type(model.method))
 
 
 """
@@ -109,7 +109,7 @@ function objective_value(model::RAMProblem, ::Quadratic)
 end
 
 SetObjective(model::RAMProblem, args...) =
-    SetObjective(model, ObjectiveType(model.method), args...)
+    SetObjective(model, _objective_type(model.method), args...)
 
 """
     SetObjective(model::RAMProblem{T}, ::Quadratic, Q::AbstractMatrix, F::AbstractVector) where T
@@ -122,7 +122,7 @@ function SetObjective(model::RAMProblem{T,F}, ::Quadratic, Q::AbstractMatrix, V:
 end
 
 #Build wrapper to set timings
-function RunBuild(model::RAMProblem)
+function _init_run(model::RAMProblem)
     t1 = time()
     Build(model, model.method)
     model.statistics.BuildTime = time() - t1
@@ -162,21 +162,21 @@ As [`optimize!`](@ref optimize!(::RAM.RAMProblem)) but takes a vector of single 
 """
 function optimize!(model::RAMProblem{T,F}, conditions::Vector{S}) where {T,F,S<:StoppingCondition}
 
-    RunBuild(model)
+    _init_run(model)
 
     #Run iterations until stop conditions are met
     #TODO put in checks that the target algorithm supports threading
 
     t1 = time()
     if !model.threads
-        while !check_stopcondition(model, conditions)
+        while !_check_stopconditions(model, conditions)
             Iterate(model)
             model.iterations += 1
         end
     else
         #set initial value to the same as that defined in the model
         thread_var = convert(Vector{T}, GetTempVar(model))
-        while !check_stopcondition(model, conditions)
+        while !_check_stopconditions(model, conditions)
             Threads.@threads for i in 1:length(thread_var)
                 thread_var[i] = IterateRow(model, i, thread_var)
             end

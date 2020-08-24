@@ -15,9 +15,9 @@
         @test typeof(problem.method) == RAM.Hildreth{Float64}
     end
 
-    @testset "ObjectiveType" begin
+    @testset "_objective_type" begin
         problem = RAM.GetModel("Hildreth")
-        @test RAM.ObjectiveType(problem) == RAM.ObjectiveType(problem.method) == RAM.Quadratic()
+        @test RAM._objective_type(problem) == RAM._objective_type(problem.method) == RAM.Quadratic()
     end
 
     @testset "SetThreads" begin
@@ -54,7 +54,7 @@
     @testset "objective_value" begin end
 
     @testset "Setup" begin end
-    @testset "RunBuild" begin end
+    @testset "_init_run" begin end
     @testset "optimize!" begin end
 
 

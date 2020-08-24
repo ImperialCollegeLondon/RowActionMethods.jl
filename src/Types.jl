@@ -18,7 +18,7 @@ abstract type ModelFormulation end
 abstract type AbstractObjectiveType end
 struct Quadratic <: AbstractObjectiveType end
 struct Linear <: AbstractObjectiveType end
-ObjectiveType(m::ModelFormulation) = error("$(typeof(m)) should define an objective function type")
+_objective_type(m::ModelFormulation) = error("$(typeof(m)) should define an objective function type")
 
 abstract type AbstractObjective end
 

@@ -67,12 +67,12 @@ end
 #= Model Status =#
 function MOI.supports(model::Optimizer,
                       ::MOI.ObjectiveFunction{MOI.ScalarQuadraticFunction{Float64}})
-    return RAM.ObjectiveType(model.inner_model) == RAM.Quadratic()
+    return RAM._objective_type(model.inner_model) == RAM.Quadratic()
 end
 
 function MOI.supports(model::Optimizer,
                       ::MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}})
-    return RAM.ObjectiveType(model.inner_model) == RAM.Linear()
+    return RAM._objective_type(model.inner_model) == RAM.Linear()
 end
 
 MOI.supports(::Optimizer, ::MOI.ObjectiveSense) = true

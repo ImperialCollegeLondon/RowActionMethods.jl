@@ -17,7 +17,7 @@ function SetTerminationStatus(model::RAMProblem, conditions::Vector{S}) where {S
 end
 
 """
-    check_stopcondition!(model::ModelFormulation, conditions::StoppingCondition)::Bool
+    _check_stopconditions!(model::ModelFormulation, conditions::StoppingCondition)::Bool
 
 Returns true if a condition for stopping has been met. Also updates model's termination
 status variable with the value returned by the activated stopping condition.
@@ -26,7 +26,7 @@ Note that the termination variables should be mapped to the MathOptInterface ter
 status codes in MOI_wrapper.jl. If your stopping condition fits an MOI condition that has
 not been implemented, then please update the wrapper accordingly.
 """
-function check_stopcondition(model::RAMProblem, conditions::Vector{S}
+function _check_stopconditions(model::RAMProblem, conditions::Vector{S}
                             )::Bool where {S<:StoppingCondition}
 
     for c in conditions
