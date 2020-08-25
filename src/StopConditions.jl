@@ -1,4 +1,4 @@
-export IterationStop, TimeStop
+export IterationCondition, TimeCondition
 
 """
 All stopping conditions take a condition that extends the StoppingCondition
@@ -6,18 +6,14 @@ abstract type.
 """
 abstract type StoppingCondition end
 
-SetTerminationStatus(m::RAMProblem, c::StoppingCondition) = SetTerminationCondition(m, [c])
+status_code(::StoppingCondition) = OTHER_TERMINATION_CONDITION
+status_string(::StoppingCondition) = "Unknown termination criteria reached"
+init_stopcondition(::RAMProblem, ::StoppingCondition) = Nothing
+test_stopcondition(::RAMProblem, ::StoppingCondition) = error("No stopping condition test function defined")
 
-function SetTerminationStatus(model::RAMProblem, conditions::Vector{S}) where {S<:StoppingCondition}
-    for c in conditions
-        !stopcondition(model, c) && continue
-        model.status = StopConditionStatus(c)
-        break
-    end
-end
 
 """
-    check_stopcondition!(model::ModelFormulation, conditions::StoppingCondition)::Bool
+    _check_stopconditions(model::ModelFormulation, conditions::StoppingCondition)::Bool
 
 Returns true if a condition for stopping has been met. Also updates model's termination
 status variable with the value returned by the activated stopping condition.
@@ -26,59 +22,80 @@ Note that the termination variables should be mapped to the MathOptInterface ter
 status codes in MOI_wrapper.jl. If your stopping condition fits an MOI condition that has
 not been implemented, then please update the wrapper accordingly.
 """
-function check_stopcondition(model::RAMProblem, conditions::Vector{S}
-                            )::Bool where {S<:StoppingCondition}
+function _check_stopconditions(model::RAMProblem, conditions::Vector{S}
+                               )::Bool where {S<:StoppingCondition}
 
     for c in conditions
-        stopcondition(model, c) && return true
+        if test_stopcondition(model, c)
+            model.status = status_code(c)
+            model.status_string = status_string(c)
+            return false
+        end
     end
-    return false
+
+    return true
 end
 
-"""
-    IterationStop(num)
 
-A stop condition that halts after 'num' iterations.
+function _init_stopconditions(model::RAMProblem, conditions::Vector{StoppingCondition})
+    for c in conditions
+        init_stopcondition(model, c)
+    end
+end
+
+
 """
-struct IterationStop <: StoppingCondition
+    IterationCondition(num)
+
+Stop the execution after ``num`` iterations.
+"""
+struct IterationCondition <: StoppingCondition
     value::Int64
+
+    function IterationCondition(num::Int64)
+        if num < 1
+            throw( DomainError(num, "Must specify more than one iteration") )
+        end
+
+        return new(num)
+    end
 end
 
-StopConditionStatus(::IterationStop) = ITERATION_LIMIT()
+status_code(::IterationCondition) = ITERATION_LIMIT_REACHED
+status_string(sc::IterationCondition) = "Reached iteration limit of $(sc.value) iterations"
 
 
-
-"""
-    stopcondition(v::WorkingVars, iterations_limit::IterationStop)
-
-Checks if the number of iterations has exceeded a maximum.
-"""
-function stopcondition(model::RAMProblem, iterations_limit::IterationStop)::Bool
+function test_stopcondition(model::RAMProblem, iterations_limit::IterationCondition)::Bool
     return model.iterations >= iterations_limit.value
 end
 
-mutable struct TimeStop <: StoppingCondition
-    running::Bool
-    start::Int64
-    limit::Int64
-    function TimeStop(limit::Int64)
-        t = new()
-        t.running = false
-        t.limit = limit
-        return t
+
+"""
+    TimeCondition(limit::Float64)
+
+Stop the execution of the algorithm after `limit` seconds has elapsed.
+"""
+mutable struct TimeCondition <: StoppingCondition
+    start::Float64
+    limit::Float64
+
+    function TimeCondition(limit::Float64)
+        if limit <= 0.0
+            throw( DomainError(limit, "Time must be postive") )
+        end
+
+        return new(0.0, limit)
     end
 end
 
-function stopcondition(model::RAMProblem, time_limit::TimeStop)
-    #Start condition if first time
-    if time_limit.running == false
-        time_limit.running = true
-        time_limit.start = floor(time())
-        return false
-    end
 
-    #Otherwise check if elapsed time is greater than limit
-    return floor(time()) - time_limit.start > time_limit.limit
+function test_stopcondition(::RAMProblem, time_limit::TimeCondition)
+    return ( time() - time_limit.start ) > time_limit.limit
 end
 
-StopConditionStatus(::TimeStop) = TIME_LIMIT()
+function init_stopcondition(::RAMProblem, tc::TimeCondition)
+    tc.start = time()
+end
+
+status_code(::TimeCondition) = TIME_LIMIT_REACHED
+status_string(sc::TimeCondition) = "Reached time limit of $(sc.limit) seconds"

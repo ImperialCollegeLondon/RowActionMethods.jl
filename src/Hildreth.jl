@@ -35,7 +35,7 @@ mutable struct Hildreth{T} <: ModelFormulation
     end
 end
 
-ObjectiveType(::Hildreth) = Quadratic()
+_objective_type(::Hildreth) = Quadratic()
 SupportsVariableDeletion(::Hildreth) = true
 
 function DeleteVariable(method::Hildreth, index)

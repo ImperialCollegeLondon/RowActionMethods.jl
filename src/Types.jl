@@ -18,7 +18,7 @@ abstract type ModelFormulation end
 abstract type AbstractObjectiveType end
 struct Quadratic <: AbstractObjectiveType end
 struct Linear <: AbstractObjectiveType end
-ObjectiveType(m::ModelFormulation) = error("$(typeof(m)) should define an objective function type")
+_objective_type(m::ModelFormulation) = error("$(typeof(m)) should define an objective function type")
 
 abstract type AbstractObjective end
 
@@ -39,10 +39,10 @@ struct SparseQuadraticObjective{T} <: AbstractObjective
     end
 end
 
-mutable struct Statistics{T}
-    BuildTime::T
-    OptimizeTime::T
-    Statistics{T}() where T = new(0.0, 0.0)
+mutable struct Statistics
+    BuildTime::Float64
+    OptimizeTime::Float64
+    Statistics()= new(0.0, 0.0)
 end
 
 
@@ -81,14 +81,14 @@ mutable struct Constraints{T,F}
     end
 end
 
-abstract type AbstractStatus end
-
-struct OPTIMIZE_NOT_CALLED              <: AbstractStatus end
-struct OPTIMAL                          <: AbstractStatus end
-struct INFEASIBLE                       <: AbstractStatus end
-struct ITERATION_LIMIT                  <: AbstractStatus end
-struct TIME_LIMIT                       <: AbstractStatus end
-struct UNKNOWN_TERMINATION_CONDITION    <: AbstractStatus end
+@enum OptimizationStatus begin
+    OPTIMIZE_NOT_CALLED
+    OPTIMAL
+    INFEASIBLE
+    ITERATION_LIMIT_REACHED
+    TIME_LIMIT_REACHED
+    OTHER_TERMINATION_CONDITION
+end
 
 mutable struct RAMProblem{T,F}
     #== Variables ==#
@@ -102,14 +102,15 @@ mutable struct RAMProblem{T,F}
     result::Union{SparseVector{T},Nothing}
 
     #== General ==#
-    status::AbstractStatus
+    status::OptimizationStatus
+    status_string::String
     iterations::F
     method::ModelFormulation
 
     #== Threading ==#
     threads::Bool
 
-    statistics::Statistics{T}
+    statistics::Statistics
 
     RAMProblem(model::String; kwargs...) = RAMProblem{Float64, Int64}(model; kwargs...)
     function RAMProblem{T,F}(model::String; kwargs...) where {T,F}
@@ -119,12 +120,12 @@ mutable struct RAMProblem{T,F}
         p.constraints = Constraints{T,F}()
 
         p.variable_count = 0
-        p.status = OPTIMIZE_NOT_CALLED()
+        p.status = OPTIMIZE_NOT_CALLED
         p.iterations = 0
         p.result = nothing
         p.threads = false
 
-        p.statistics = Statistics{T}()
+        p.statistics = Statistics()
 
         p.method = method_mapping[model]{T}(;kwargs...)
         return p

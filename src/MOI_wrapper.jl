@@ -47,7 +47,7 @@ end
 #= Model Actions =#
 function MOI.optimize!(model::Optimizer)
     RAM.SetThreads(model.inner_model; threads = model.threads)
-    RAM.Optimize(model.inner_model, model.stopping_conditions)
+    RAM.optimize!(model.inner_model, model.stopping_conditions)
 end
 
 #= Custom Options =#
@@ -67,12 +67,12 @@ end
 #= Model Status =#
 function MOI.supports(model::Optimizer,
                       ::MOI.ObjectiveFunction{MOI.ScalarQuadraticFunction{Float64}})
-    return RAM.ObjectiveType(model.inner_model) == RAM.Quadratic()
+    return RAM._objective_type(model.inner_model) == RAM.Quadratic()
 end
 
 function MOI.supports(model::Optimizer,
                       ::MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}})
-    return RAM.ObjectiveType(model.inner_model) == RAM.Linear()
+    return RAM._objective_type(model.inner_model) == RAM.Linear()
 end
 
 MOI.supports(::Optimizer, ::MOI.ObjectiveSense) = true
@@ -233,11 +233,11 @@ end
 
 #Maps internal RAM termination conditions to MOI equivalents
 RAM_MOI_Termination_Map = Dict(
-                               RAM.OPTIMIZE_NOT_CALLED() => MOI.OPTIMIZE_NOT_CALLED,
-                               RAM.OPTIMAL()             => MOI.OPTIMAL,
-                               RAM.INFEASIBLE()          => MOI.INFEASIBLE,
-                               RAM.ITERATION_LIMIT()     => MOI.ITERATION_LIMIT,
-                               RAM.TIME_LIMIT()          => MOI.TIME_LIMIT
+                               RAM.OPTIMIZE_NOT_CALLED      => MOI.OPTIMIZE_NOT_CALLED,
+                               RAM.OPTIMAL                  => MOI.OPTIMAL,
+                               RAM.INFEASIBLE               => MOI.INFEASIBLE,
+                               RAM.ITERATION_LIMIT_REACHED  => MOI.ITERATION_LIMIT,
+                               RAM.TIME_LIMIT_REACHED       => MOI.TIME_LIMIT
                               )
 
 function MOI.get(model::Optimizer, ::MOI.TerminationStatus)
@@ -246,7 +246,7 @@ end
 
 function MOI.get(model::Optimizer, ::MOI.ObjectiveValue)
     sense = model.sense == MOI.MAX_SENSE ? -1 : 1
-    return sense * RAM.GetObjectiveValue(model.inner_model)
+    return sense * RAM.objective_value(model.inner_model)
 end
 
 function MOI.get(model::Optimizer, ::MOI.VariablePrimal, vi::MOI.VariableIndex)

@@ -1,4 +1,4 @@
-export GetModel, Optimize, SetThreads, GetVariables, GetObjectiveValue
+export GetModel, optimize!, SetThreads, GetVariables, objective_value
 
 """
     GetModel(model::String; kwargs...)::RAMProblem
@@ -17,7 +17,7 @@ function GetModel(method::String; kwargs...)::RAMProblem
     return RAMProblem(method; kwargs...)
 end
 
-ObjectiveType(model::RAMProblem) = ObjectiveType(model.method)
+_objective_type(model::RAMProblem) = _objective_type(model.method)
 
 """
     SetThreads(model::RAMProblem; threads::Bool=true)
@@ -88,20 +88,20 @@ GetTempVar(m::RAMProblem) = GetTempVar(m.method)
 VarUpdate(m::RAMProblem{T}, var::Vector{T}) where T = VarUpdate(m.method, var)
 
 """
-    GetObjectiveValue(model::RAMProblem{T,F})::T
+    objective_value(model::RAMProblem{T,F})::T
 
 Return the evaluated objective for the current solution.
 """
-(GetObjectiveValue(model::RAMProblem{T,F})::T) where {T,F}=
-    GetObjectiveValue(model, ObjectiveType(model.method))
+(objective_value(model::RAMProblem{T,F})::T) where {T,F}=
+    objective_value(model, _objective_type(model.method))
 
 
 """
-    GetObjectiveValue(model::RAMProblem, ::Quadratic)
+    objective_value(model::RAMProblem, ::Quadratic)
 
 Evaluate the cost of the objective function for a quadratic objective.
 """
-function GetObjectiveValue(model::RAMProblem, ::Quadratic)
+function objective_value(model::RAMProblem, ::Quadratic)
     B, d = GetObjective(model)
     x = GetVariables(model)
 
@@ -109,7 +109,7 @@ function GetObjectiveValue(model::RAMProblem, ::Quadratic)
 end
 
 SetObjective(model::RAMProblem, args...) =
-    SetObjective(model, ObjectiveType(model.method), args...)
+    SetObjective(model, _objective_type(model.method), args...)
 
 """
     SetObjective(model::RAMProblem{T}, ::Quadratic, Q::AbstractMatrix, F::AbstractVector) where T
@@ -122,16 +122,23 @@ function SetObjective(model::RAMProblem{T,F}, ::Quadratic, Q::AbstractMatrix, V:
 end
 
 #Build wrapper to set timings
-function RunBuild(model::RAMProblem)
+function _init_run(model::RAMProblem)
     t1 = time()
     Build(model, model.method)
     model.statistics.BuildTime = time() - t1
 end
 
-Optimize(model::RAMProblem, ::Nothing) = Optimize(model)
 
 """
-    Optimize(model::RAMProblem)
+    optimize!(model::RAMProblem, s::StoppingCondition)
+
+Like [`optimize!`](@ref optimize!(model::RAMProblem{T,F}, conditions::Vector{S} = [IterationCondition(32)])) but takes
+a single stopping condition to end on rather than a vector of stopping conditons.
+"""
+optimize!(model::RAMProblem, s::StoppingCondition) = optimize!(model, [s])
+
+"""
+    optimize!(model::RAMProblem{T,F}, conditions::Vector{S} = [IterationCondition(32)]) where {T,F,S<:StoppingCondition}
 
 Iterate `model.method` algorithm until a stopping condition has been met, then
 set the termination status and calculate the primal solution.
@@ -143,40 +150,29 @@ If configured as multi threaded then `IterateRow` is called for each index in th
 variable returned by `GetTempVar`. Calls to `IterateRow` are distributed amongst all
 available threads.
 
-Configures the algorithm to terminate after 32 iterations.
+By default, `conditions` contains only an iteration termination criteria to terminate the algorithm
+after 32 iterations.
 """
-Optimize(model::RAMProblem) = Optimize(model, [IterationStop(32)])
+function optimize!(model::RAMProblem{T,F}, conditions::Vector{S} = [IterationCondition(32)]
+                  ) where {T,F,S<:StoppingCondition}
 
-"""
-    Optimize(model::RAMProblem, s::StoppingCondition)
-
-As [`Optimize`](@ref Optimize(::RAM.RAMProblem)) but takes a single stopping condition to end on rather than
-the default.
-"""
-Optimize(model::RAMProblem, s::StoppingCondition) = Optimize(model, [s])
-
-"""
-    Optimize(model::RAMProblem{T,F}, conditions::Vector{S}) where {T,F,S<:StoppingCondition}
-
-As [`Optimize`](@ref Optimize(::RAM.RAMProblem)) but takes a vector of single stopping conditions to end on.
-"""
-function Optimize(model::RAMProblem{T,F}, conditions::Vector{S}) where {T,F,S<:StoppingCondition}
-
-    RunBuild(model)
+    # Initialize the algorithm run
+    _init_run(model)
+    _init_stopconditions(model, conditions)
 
     #Run iterations until stop conditions are met
     #TODO put in checks that the target algorithm supports threading
 
     t1 = time()
     if !model.threads
-        while !check_stopcondition(model, conditions)
+        while _check_stopconditions(model, conditions)
             Iterate(model)
             model.iterations += 1
         end
     else
         #set initial value to the same as that defined in the model
         thread_var = convert(Vector{T}, GetTempVar(model))
-        while !check_stopcondition(model, conditions)
+        while _check_stopconditions(model, conditions)
             Threads.@threads for i in 1:length(thread_var)
                 thread_var[i] = IterateRow(model, i, thread_var)
             end
@@ -184,8 +180,6 @@ function Optimize(model::RAMProblem{T,F}, conditions::Vector{S}) where {T,F,S<:S
             VarUpdate(model, thread_var)
         end
     end
-
-    SetTerminationStatus(model, conditions)
 
     #Calculate solution
     #TODO Maybe make this optional, in case the problem will be solved in

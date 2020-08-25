@@ -46,7 +46,7 @@ function is_model_empty(model::RAMProblem)
            model.variable_count == 0 &&
            model.constraints.max_constraint_index == 0 &&
            model.constraints.constraint_count == 0 &&
-           model.status == OPTIMIZE_NOT_CALLED() &&
+           model.status == OPTIMIZE_NOT_CALLED &&
            model.iterations == 0
 end
 
