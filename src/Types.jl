@@ -39,10 +39,10 @@ struct SparseQuadraticObjective{T} <: AbstractObjective
     end
 end
 
-mutable struct Statistics{T}
-    BuildTime::T
-    OptimizeTime::T
-    Statistics{T}() where T = new(0.0, 0.0)
+mutable struct Statistics
+    BuildTime::Float64
+    OptimizeTime::Float64
+    Statistics()= new(0.0, 0.0)
 end
 
 
@@ -110,7 +110,7 @@ mutable struct RAMProblem{T,F}
     #== Threading ==#
     threads::Bool
 
-    statistics::Statistics{T}
+    statistics::Statistics
 
     RAMProblem(model::String; kwargs...) = RAMProblem{Float64, Int64}(model; kwargs...)
     function RAMProblem{T,F}(model::String; kwargs...) where {T,F}
@@ -125,7 +125,7 @@ mutable struct RAMProblem{T,F}
         p.result = nothing
         p.threads = false
 
-        p.statistics = Statistics{T}()
+        p.statistics = Statistics()
 
         p.method = method_mapping[model]{T}(;kwargs...)
         return p
