@@ -81,18 +81,18 @@ The solver supports the ability to terminate optimisation based on an arbitrary 
 
 The algorithm must be used with at least one stopping condition. By default this will be an iteration limit of 32.
 
-The built in stopping conditions are `IterationStop` and `TimeStop`. Each is instantiated with their limit (number of iterations and seconds respectively) and passed to `optimize!`.
+The built in stopping conditions are `IterationCondition` and `TimeCondition`. Each is instantiated with their limit (number of iterations and seconds respectively) and passed to `optimize!`.
 
 To use a single stopping condition:
 ```julia
-time_limit = TimeStop(30) #A 30 second time limit
+time_limit = TimeCondition(30) #A 30 second time limit
 optimize!(model, time_limit)
 ```
 
 Use multiple stopping conditions by passing them as a vector:
 ```julia
-time_limit = TimeStop(30) #A 30 second time limit
-iteration_limit = IterationStop(15) #Stop after 15 iterations
+time_limit = TimeCondition(30) #A 30 second time limit
+iteration_limit = IterationCondition(15) #Stop after 15 iterations
 optimize!(model, [time_limit, iteration_limit])
 ```
 

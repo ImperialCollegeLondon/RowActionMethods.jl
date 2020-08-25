@@ -81,14 +81,14 @@ mutable struct Constraints{T,F}
     end
 end
 
-abstract type AbstractStatus end
-
-struct OPTIMIZE_NOT_CALLED              <: AbstractStatus end
-struct OPTIMAL                          <: AbstractStatus end
-struct INFEASIBLE                       <: AbstractStatus end
-struct ITERATION_LIMIT                  <: AbstractStatus end
-struct TIME_LIMIT                       <: AbstractStatus end
-struct UNKNOWN_TERMINATION_CONDITION    <: AbstractStatus end
+@enum OptimizationStatus begin
+    OPTIMIZE_NOT_CALLED
+    OPTIMAL
+    INFEASIBLE
+    ITERATION_LIMIT_REACHED
+    TIME_LIMIT_REACHED
+    OTHER_TERMINATION_CONDITION
+end
 
 mutable struct RAMProblem{T,F}
     #== Variables ==#
@@ -102,7 +102,8 @@ mutable struct RAMProblem{T,F}
     result::Union{SparseVector{T},Nothing}
 
     #== General ==#
-    status::AbstractStatus
+    status::OptimizationStatus
+    status_string::String
     iterations::F
     method::ModelFormulation
 
@@ -119,7 +120,7 @@ mutable struct RAMProblem{T,F}
         p.constraints = Constraints{T,F}()
 
         p.variable_count = 0
-        p.status = OPTIMIZE_NOT_CALLED()
+        p.status = OPTIMIZE_NOT_CALLED
         p.iterations = 0
         p.result = nothing
         p.threads = false

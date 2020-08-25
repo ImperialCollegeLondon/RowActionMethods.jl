@@ -132,13 +132,13 @@ end
 """
     optimize!(model::RAMProblem, s::StoppingCondition)
 
-As [`optimize!`](@ref optimize!(model::RAMProblem{T,F}, conditions::Vector{S} = [IterationStop(32)])) but takes
+Like [`optimize!`](@ref optimize!(model::RAMProblem{T,F}, conditions::Vector{S} = [IterationCondition(32)])) but takes
 a single stopping condition to end on rather than a vector of stopping conditons.
 """
 optimize!(model::RAMProblem, s::StoppingCondition) = optimize!(model, [s])
 
 """
-    optimize!(model::RAMProblem{T,F}, conditions::Vector{S} = [IterationStop(32)]) where {T,F,S<:StoppingCondition}
+    optimize!(model::RAMProblem{T,F}, conditions::Vector{S} = [IterationCondition(32)]) where {T,F,S<:StoppingCondition}
 
 Iterate `model.method` algorithm until a stopping condition has been met, then
 set the termination status and calculate the primal solution.
@@ -153,23 +153,26 @@ available threads.
 By default, `conditions` contains only an iteration termination criteria to terminate the algorithm
 after 32 iterations.
 """
-function optimize!(model::RAMProblem{T,F}, conditions::Vector{S} = [IterationStop(32)]) where {T,F,S<:StoppingCondition}
+function optimize!(model::RAMProblem{T,F}, conditions::Vector{S} = [IterationCondition(32)]
+                  ) where {T,F,S<:StoppingCondition}
 
+    # Initialize the algorithm run
     _init_run(model)
+    _init_stopconditions(model, conditions)
 
     #Run iterations until stop conditions are met
     #TODO put in checks that the target algorithm supports threading
 
     t1 = time()
     if !model.threads
-        while !_check_stopconditions(model, conditions)
+        while _check_stopconditions(model, conditions)
             Iterate(model)
             model.iterations += 1
         end
     else
         #set initial value to the same as that defined in the model
         thread_var = convert(Vector{T}, GetTempVar(model))
-        while !_check_stopconditions(model, conditions)
+        while _check_stopconditions(model, conditions)
             Threads.@threads for i in 1:length(thread_var)
                 thread_var[i] = IterateRow(model, i, thread_var)
             end
@@ -177,8 +180,6 @@ function optimize!(model::RAMProblem{T,F}, conditions::Vector{S} = [IterationSto
             VarUpdate(model, thread_var)
         end
     end
-
-    SetTerminationStatus(model, conditions)
 
     #Calculate solution
     #TODO Maybe make this optional, in case the problem will be solved in
